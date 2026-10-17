@@ -1,0 +1,102 @@
+# bashagent
+
+Translate a plain-language request into one bash command, a short explanation, and a risk label.
+
+The program prints the command and can copy it to the clipboard. It never executes it.
+
+## Why it does not execute
+
+The person at the keyboard reads the command and the explanation before anything happens. Running it means pasting it into their own shell and pressing Enter. There is no confirmation prompt to click through, and no flag that turns execution on, because there is no execution path.
+
+A Python process that ran `cd`, `export`, or `source` would change its own subprocess and then exit. The user's shell would be left where it was. Handing over the string makes those commands behave the same way `ls` does.
+
+## Installation
+
+Requires Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
+
+```bash
+uv sync
+uv run bashagent --help
+```
+
+## Usage
+
+```bash
+uv run bashagent "hitta alla pdf:er större än 10 MB" --no-clipboard
+uv run bashagent "ersätt foo med bar på plats i notes.txt" --platform bsd --no-clipboard
+uv run bashagent "ta bort alla .tmp-filer rekursivt" --json --no-clipboard
+```
+
+Explanations are in Swedish. The default provider is `fake`, a scripted stand-in used for tests and for `make eval`. It does not call a model.
+
+```bash
+export OPENAI_API_KEY="..."   # not stored in the repo
+uv run bashagent "visa de fem största filerna" --provider openai --platform auto
+```
+
+`--no-clipboard` skips copying. Without it, the command is copied with `pbcopy` on macOS, then `wl-copy`, `xclip` or `xsel`, then `clip.exe` under WSL, then an OSC 52 sequence. The copied text has no trailing newline, so pasting does not press Enter. The command is always printed.
+
+## Configuration
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `OPENAI_API_KEY` | Required only for `--provider openai` | unset |
+| `BASHAGENT_PROVIDER` | `fake` or `openai` | `fake` |
+| `BASHAGENT_MODEL` | Model id sent to OpenAI | `gpt-5-mini` |
+| `BASHAGENT_PLATFORM` | `auto`, `bsd`, or `gnu` | `auto` |
+| `BASHAGENT_EXPLAIN_LEVEL` | `kort` or `lång` | `kort` |
+| `BASHAGENT_MAX_OUTPUT_TOKENS` | Cap on the model output | `400` |
+| `BASHAGENT_CACHE_DIR` | Response cache directory | `~/.cache/bashagent` |
+
+An optional file `~/.config/bashagent/config.toml` can set `provider`, `model`, `platform`, `explain_level`, and `max_output_tokens`. A flag wins over the environment, which wins over the file. See `.env.example`. Temperature is `0`.
+
+`auto` detects the machine: macOS is BSD, Linux (including WSL) is GNU. `--platform gnu` or `--platform bsd` forces the other syntax into the prompt.
+
+## How it works
+
+```
+plain language
+    │
+    ▼
+cli → config → prompt (system prompt + platform + a few examples)
+                    │
+                    ▼
+                provider (fake, or OpenAI when a key is set)
+                    │
+                    ▼
+                schema (JSON: command, explanation, risk, risk_reason, platform_notes)
+                    │
+                    ▼
+                 risk (rules may raise the label, never lower it)
+                    │
+         ┌──────────┴──────────┐
+         ▼                     ▼
+      render               clipboard
+```
+
+Responses are cached on disk. The cache key is a SHA-256 of the system prompt, user prompt, prompt version, model id, temperature, output-token cap, platform mode, and JSON schema.
+
+## Evaluation
+
+```bash
+make test
+make eval
+```
+
+`make eval` runs `eval/tasks.yaml` through the fake provider and the on-disk cache. It compares command strings. It does not execute them, and it does not call an API. No API key is required.
+
+`eval/tasks.yaml` holds a few examples so the file format is fixed. It is not the 40-task set, and the references have not been execution-validated. There is no results table yet. Once real responses are cached and checked in, `make eval` is meant to reproduce that table from the cache without an API key.
+
+## Limitations
+
+- Nothing in `bashagent/` runs a generated command. Container execution for the behavior tasks is not built yet.
+- The fake provider returns scripted answers. Its match rate is not a measurement.
+- The OpenAI client is implemented and untested against the live API. This tree has no key.
+- There is no Anthropic provider yet.
+- The safety net is a set of lexical rules, not a shell parser. It misses commands it has no pattern for, and it can flag a harmless read of a path outside the home directory.
+- Clipboard support degrades to printing the command. There is no native Windows support beyond the WSL `clip.exe` fallback.
+- Explanations are Swedish. Code, comments, and this file are English.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
