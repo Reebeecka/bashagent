@@ -174,7 +174,7 @@ För en disciplinerad read-only-användare ger verktyget ingen fördel. Codex ka
 
 Verktyget är smalare på andra sätt också. Det läser inte om ett fel och rättar sig, eftersom det aldrig kör. Det ser inte katalogen, bara prompten. Stjärnor på GitHub, hämtade 2026-10-19: [shell-gpt](https://github.com/TheR1D/shell_gpt) 12 298, [Open Interpreter](https://github.com/openinterpreter/openinterpreter) 68 604, [thefuck](https://github.com/nvbn/thefuck) 97 914 och [ai-shell](https://github.com/BuilderIO/ai-shell) 5 304. Ett helgprojekt har inte den mognaden. thefuck är en regelkatalog, `rules` i inställningsfilen, och frågar innan den kör ([const.py](https://github.com/nvbn/thefuck/blob/c7e7e1d8/thefuck/const.py)).
 
-Slutsatsen från mätningen på prompt 0.1.0 står kvar bredvid det här. Ojusterat höll den billiga 35/40 mot 33/40. McNemars exakta test ger p = 0,625, så skillnaden är inte statistiskt säkerställd. Den justerade siffran är 39/40 mot 37/40. Den billiga kostade ungefär en femtedel. För det här användningsfallet räcker `gpt-4.1-mini`. Prompt 0.2.0, på 54 uppgifter, gav 41/54 mot 40/54.
+Slutsatsen från mätningen på prompt 0.1.0 står kvar bredvid det här. Ojusterat höll den billiga 35/40 mot 33/40. McNemars exakta test ger p = 0,625, så skillnaden är inte statistiskt säkerställd. Den justerade siffran är 39/40 mot 37/40. Den billiga kostade ungefär en femtedel. För det här användningsfallet räcker `gpt-4.1-mini`. Prompt 0.2.0, på 54 uppgifter, gav 41/54 mot 40/54. Omkörningen visar att den lilla modellen själv underskattade alla tre truncate-fallen, och att det var nätet som rättade dem. Den billiga räcker, tillsammans med säkerhetsnätet.
 
 ## Källor
 

@@ -125,3 +125,5 @@ Bekräftelsen går att stänga av hos de andra: Copilot `/yolo` och `--allow-all
 En sandbox skyddar inte filerna i arbetsytan. `find . -delete` där filerna ligger träffar ändå.
 
 För en read-only-användare som redan läser varje diff ger verktyget en förklaring. Förslaget kan klistras in i ett skal under `sandbox-exec`.
+
+Omkörningen visar att den lilla modellen själv underskattade alla tre truncate-fallen, och att det var nätet som rättade dem. Den billiga räcker, tillsammans med säkerhetsnätet.
