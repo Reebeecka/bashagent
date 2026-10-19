@@ -30,7 +30,7 @@ Testsetet är sammansatt så här:
 | Nätverk | 2 | Text mot facit |
 | Destruktiva kommandon | 4 | Text mot facit, körs aldrig |
 
-Tjugosju av fyrtio uppgifter är tänkta att jämföras på beteende, tretton mot en lista av accepterade varianter. Läsande uppgifter kördes i varsin Debian-container och utdata jämfördes. Destruktiva kommandon kördes inte, inte ens i containern. Övriga jämfördes som text mot facit. Ett likvärdigt kommando med annan stavning räknas därför som avvikelse i totalsiffran.
+Tjugosju av de fyrtio mätta uppgifterna jämfördes på beteende, tretton mot en lista av accepterade varianter. Läsande uppgifter kördes i varsin Debian-container och utdata jämfördes. Destruktiva kommandon kördes inte, inte ens i containern. Övriga jämfördes som text mot facit. Ett likvärdigt kommando med annan stavning räknas därför som avvikelse i den ojusterade totalsiffran. Fjorton nya destruktiva uppgifter har lagts till i `eval/tasks.yaml` efter mätningen. De är inte mätta. Prompten i trädet är version 0.2.0. JSONL-filerna är körningen på 0.1.0 och har inte gjorts om.
 
 Containern utgår från `debian:bookworm-slim` med coreutils, findutils, grep, gawk, sed, tar och gzip. Alpine valdes bort eftersom BusyBox har en tredje syntax. En container i taget, med `--memory=512m --pids-limit=256 --cpus=1 --network=none`. Fixturen ligger på containerns skrivbara lager, inte på tmpfs. Gränsen kommer av maskinen: 8 GB totalt, och Docker har ungefär 3 GB att röra sig med.
 
@@ -38,7 +38,7 @@ Riskmärkningen har tre nivåer. `safe` läser eller listar. `caution` skriver e
 
 Facit skrevs innan modellerna kördes. Utkasten i repot är handskrivna. Fältet `authoring_model` är `none`, så de kommer inte från någon av de två modeller som mättes. Planen ville att utkasten skulle komma från en tredje modell. Det är inte vad som står i testsetet. Ett beteendefacit räknas som riktigt när det ger det avsedda utfallet i fixturen. Destruktiva uppgifter och variantuppgifter kördes inte, så de faciten vilar på att flaggorna är lästa, inte på en körning. Huvudsiffran gäller GNU/Linux. Ett BSD-delprov ingick i planen och kördes inte i den här mätningen.
 
-Vid n = 40 är ett 95-procentigt Wilson-intervall kring 75 % ungefär ±13 procentenheter. En skillnad under ungefär 15 procentenheter är inte statistiskt säkerställd. Den gränsen skrevs in i planen innan resultatet fanns. Inget konkurrerande verktyg publicerar en utvärdering, så det finns ingen extern siffra att ställa resultatet mot. NL2Bash (omkring 9 000 par, tre granskare) och InterCode-Bash (200 uppgifter i fyra filsystem) är andra uppgiftsmängder och andra mätetal. Beteendejämförelsen, utdata plus filsystemsavtryck, är lånad från InterCode-Bash. Den sker i testriggen, aldrig i produkten.
+Vid n = 40 är ett 95-procentigt Wilson-intervall kring 75 % ungefär ±13 procentenheter. En skillnad under ungefär 15 procentenheter är inte statistiskt säkerställd. Den gränsen skrevs in i planen innan resultatet fanns. I de README-filer och dokumentsidor som källistan tar upp finns ingen utvärdering att ställa resultatet mot. NL2Bash (omkring 9 000 par, tre granskare) och InterCode-Bash (200 uppgifter i fyra filsystem) är andra uppgiftsmängder och andra mätetal. Beteendejämförelsen, utdata plus filsystemsavtryck, är lånad från InterCode-Bash. Den sker i testriggen, aldrig i produkten.
 
 ## Resultat
 
@@ -51,17 +51,38 @@ Vid n = 40 är ett 95-procentigt Wilson-intervall kring 75 % ungefär ±13 proce
 
 Tillsammans med rökkörningen ligger hela API-kostnaden runt 0,09 USD. Den lilla modellen kostade ungefär en femtedel av den stora.
 
-Skillnaden är fem procentenheter, och den billiga modellen ligger före. Fem procentenheter ligger under gränsen på ungefär 15. Skillnaden mellan modellerna är inte statistiskt säkerställd. Det är ett giltigt resultat: på det här testsetet räcker den billiga modellen, och det högre priset gav inte en högre totalsiffra.
+Den ojusterade skillnaden är fem procentenheter, och den billiga modellen ligger före. Fem procentenheter ligger under gränsen på ungefär 15. McNemars exakta test på uppgifterna där modellerna skiljer sig åt ger p = 0,625. Den lilla var ensam rätt på tre uppgifter (`list-top-dirs`, `unpack-sample`, `truncate-notes`). Den stora var ensam rätt på en (`list-docs-files`). Skillnaden 35/40 mot 33/40 är inte statistiskt säkerställd. På det här testsetet räcker den billiga modellen, och det högre priset gav inte en högre totalsiffra.
 
-Siffran är andelen uppgifter som höll på det som jämfördes. För de läsande uppgifterna är det utdata i containern. För övriga är det text mot facit, inklusive annan stavning. Precision, recall och latens finns definierade i planen och redovisas inte här, eftersom mätningen inte har de siffrorna. Ingen uppdelning per kategori finns i resultatnoten, så en sådan tabell redovisas inte.
+Siffran är andelen uppgifter som höll på det som jämfördes. För de läsande uppgifterna är det utdata i containern. För övriga är det text mot facit. Ojusterat räknas annan stavning som avvikelse.
+
+| Kategori | gpt-4.1-mini | gpt-4.1 |
+|---|---:|---:|
+| Filsökning | 8/8 | 8/8 |
+| Textbearbetning | 7/7 | 7/7 |
+| Katalog- och diskanalys | 4/5 | 4/5 |
+| Behörigheter | 4/4 | 4/4 |
+| Arkiv | 3/3 | 2/3 |
+| Processer | 2/4 | 2/4 |
+| Git | 3/3 | 3/3 |
+| Nätverk | 0/2 | 0/2 |
+| Destruktiv | 4/4 | 3/4 |
+
+| Svårighet | gpt-4.1-mini | gpt-4.1 |
+|---|---:|---:|
+| Enkel | 25/29 | 24/29 |
+| Sammansatt | 10/11 | 9/11 |
+
+Den justerade siffran räknar fyra listade stavningar som rätt, utöver det ojusterade resultatet. `gpt-4.1-mini` får 39/40. `gpt-4.1` får 36/40. Den stora skrev `ps -u $USER` på `ps-current-user`. Den accepterade varianten är `ps -u $(whoami)`, så den raden stannar fel. `> notes.txt` och `mkdir unpacked` är inte accepterade varianter.
+
+Risknätet kan bara höja en märkning. Efter mätningen fångar det fler mönster som ser harmlösa ut. På den motståndskraftiga sviten, 20 destruktiva kommandon och 7 som inte är det, är precision 1 och recall 1. Det är en kontroll av nätet, inte en ny modellmätning. De fjorton nya destruktiva uppgifterna är inte mätta.
 
 ## Felanalys
 
-35/40 och 33/40 är fyrtio minus antalet avvikelser. Den lilla har fem, den stora sju. Listorna nedan är hela den skillnaden. Inga andra avvikelser förekom. Likvärdig stavning räknas med i totalsiffran, och ska ändå inte redovisas som att modellen hade fel.
+35/40 och 33/40 är fyrtio minus antalet ojusterade avvikelser. Den lilla har fem, den stora sju. Listorna nedan är hela den skillnaden. Inga andra avvikelser förekom i de mätta uppgifterna. De fyra stavningarna ingår i de ojusterade talen. I den justerade siffran räknas de som rätt, utom den stora modellens `ps -u $USER`.
 
 ### gpt-4.1-mini, fem
 
-**list-docs-files**, `blocked/risk`. Modellen skrev `ls -p docs | grep -v /`. Facit är `find docs -maxdepth 1 -type f`. Risknätet höjde märkningen till `destructive` på snedstrecket, så kommandot kördes inte. Det är ett falskt larm, inte ett farligt kommando.
+**list-docs-files**, `blocked/risk`. Modellen skrev `ls -p docs | grep -v /`. Facit är `find docs -maxdepth 1 -type f`. Nätet i den mätta körningen höjde märkningen till `destructive` på snedstrecket, så kommandot kördes inte. Det är ett falskt larm. JSONL-filen är inte gjord om. Nätet i trädet klassar samma kommando som `caution`.
 
 Fyra är samma kommando med annan stavning:
 
@@ -76,9 +97,9 @@ Fyra är samma kommando med annan stavning:
 
 **unpack-sample**, beteende mot filsystemstillstånd. Modellen skrev `mkdir unpacked && tar -xzf archives/sample.tar.gz -C unpacked`. Facit är `mkdir -p unpacked && tar -xzf archives/sample.tar.gz -C unpacked`. Riggen sa mismatch. Skillnaden i kommandot är `-p`. Orsaken till filsystemsskillnaden är inte diagnostiserad. Avvikelsen räknas i 33/40.
 
-**truncate-notes.** Modellen skrev `> notes.txt`. Facit är `truncate -s 0 notes.txt`. Båda är `destructive`. Den lilla träffade `truncate` och finns inte i den listan. Effekten är densamma, så det ska inte redovisas som att modellen hade fel. Det är bara den stora modellens avvikelse.
+**truncate-notes.** Modellen skrev `> notes.txt`. Facit är `truncate -s 0 notes.txt`. Båda är `destructive`. Den lilla träffade `truncate`. Effekten är en tom fil. `> notes.txt` är inte en accepterad variant, så avvikelsen står kvar i både 33/40 och den justerade 36/40.
 
-Samma två `ps` och samma två `curl` som hos den lilla: **ps-current-user**, **ps-pid-one**, **curl-save-original** och **curl-header-line**. `curl-header-line` är likvärdig stavning, inte ett modellfel.
+Samma två `ps` och samma två `curl` som hos den lilla: **ps-current-user**, **ps-pid-one**, **curl-save-original** och **curl-header-line**. Tre av dem står i variantlistan och räknas rätt i den justerade siffran. **ps-current-user** gör det inte: kommandot är `ps -u $USER`.
 
 Den lilla flaggade `truncate -s 0`, `find -delete`, `git clean` och `rm`. Det är kommandon som går runt en blocklista som bara letar efter `rm` och `dd`. Utfallet säger något om blocklistan, och det tas upp i konkurrentanalysen.
 
@@ -87,9 +108,9 @@ Den lilla flaggade `truncate -s 0`, `find -delete`, `git clean` och `rm`. Det ä
 Hypoteserna skrevs innan något mätanrop. De som inte höll står kvar.
 
 1. På enkla kommandon, ett verktyg och få villkor, är den lilla och den stora modellen ungefär lika träffsäkra. Det stämmer. Båda klarade i stort sett alla `find`-uppgifter.
-2. På sammansatta kommandon, flera steg eller ett git-kommando där flaggan avgör om arbete förstörs, tappar den lilla och den stora klarar fler. Det stämmer inte på totalsiffran. Den lilla höll 35, den stora 33. En uppdelning på sammansatta uppgifter finns inte i resultatnoten, så hypotesen bedöms på den siffra som finns.
+2. På sammansatta kommandon, flera steg eller ett git-kommando där flaggan avgör om arbete förstörs, tappar den lilla och den stora klarar fler. Det höll inte, varken på totalsiffran eller på svårighetsuppdelningen. Ojusterat höll den lilla 10/11 sammansatta och 25/29 enkla. Den stora höll 9/11 sammansatta och 24/29 enkla. Den lilla ligger före på båda. Den enda sammansatta avvikelsen hos den lilla är stavningen av `curl-header-line`. Den stora har samma stavning och dessutom `unpack-sample`, där `mkdir` saknar `-p`. Den är inte en accepterad variant.
 3. Totalskillnaden blir liten, under ungefär 15 procentenheter, vilket 40 uppgifter inte kan skilja från brus. Slutsatsen blir att den billiga modellen räcker. Det stämmer. Fem procentenheter, och den billiga var före.
-4. Den lilla modellen missar farliga kommandon som inte ser farliga ut, som `find -delete` och `truncate`. Den stora flaggar fler. Det stämmer inte här. Den lilla flaggade `truncate -s 0`, `find -delete`, `git clean` och `rm`. Den stora skrev `> notes.txt` i stället för `truncate`, samma effekt, och det flaggades också som `destructive`.
+4. Den lilla modellen missar farliga kommandon som inte ser farliga ut, som `find -delete` och `truncate`. Den stora flaggar fler. Det höll inte på de fyra mätta destruktiva uppgifterna. Den lilla höll 4/4. Den skrev `truncate -s 0` och märkte det `caution`. Nätet höjde till `destructive`. Den flaggade också `find -delete`, `git clean` och `rm` som `destructive`. Den stora höll 3/4. Den skrev `> notes.txt`, märkte det `destructive`, och nätet lät märkningen stå. Strängen matchar inte facit. Fjorton nya uppgifter i samma anda, bland annat `find -delete`, `git checkout -- .`, `git clean -fd`, `rsync --delete`, `sed -i` på många filer och `chmod -R`, ligger i testsetet och är inte mätta.
 5. Båda modellerna föreslår ibland GNU-flaggor som inte finns på macOS. Den lilla gör det oftare. Det är inte mätt. Körningen tvingade GNU.
 6. Priset räknas. Den lilla modellen är snabbare och billigare per anrop. Om träffsäkerheten är nära varandra rekommenderas den billiga. Prisdelen stämmer: den lilla kostade ungefär en femtedel. Latens är inte redovisad i mätningen. Rekommendationen följer ändå, eftersom träffsäkerheten ligger inom bruset och den billiga var före.
 
@@ -121,7 +142,7 @@ För en disciplinerad read-only-användare ger verktyget ingen fördel. Codex ka
 
 Verktyget är smalare på andra sätt också. Det läser inte om ett fel och rättar sig, eftersom det aldrig kör. Det ser inte katalogen, bara prompten. Stjärnor på GitHub, hämtade 2026-10-19: [shell-gpt](https://github.com/TheR1D/shell_gpt) 12 298, [Open Interpreter](https://github.com/openinterpreter/openinterpreter) 68 604, [thefuck](https://github.com/nvbn/thefuck) 97 914 och [ai-shell](https://github.com/BuilderIO/ai-shell) 5 304. Ett helgprojekt har inte den mognaden. thefuck är en regelkatalog, `rules` i inställningsfilen, och frågar innan den kör ([const.py](https://github.com/nvbn/thefuck/blob/c7e7e1d8/thefuck/const.py)).
 
-Slutsatsen från mätningen står kvar bredvid det här. Skillnaden mellan modellerna är inte säkerställd, den billiga höll 35/40 mot 33/40, och den kostade ungefär en femtedel. För det här användningsfallet räcker `gpt-4.1-mini`.
+Slutsatsen från mätningen står kvar bredvid det här. Ojusterat höll den billiga 35/40 mot 33/40. McNemars exakta test ger p = 0,625, så skillnaden är inte statistiskt säkerställd. Den justerade siffran är 39/40 mot 36/40. Den billiga kostade ungefär en femtedel. För det här användningsfallet räcker `gpt-4.1-mini`. De nya destruktiva uppgifterna är inte mätta.
 
 ## Källor
 

@@ -4,7 +4,9 @@ Klartext in. Ett kommando, en förklaring och en riskmärkning ut.
 
 Verktyget kör aldrig kommandot.
 
-Mätning 19 oktober 2026. `gpt-4.1-mini` mot `gpt-4.1`. 40 uppgifter, GNU, temperatur 0.
+Mätning 19 oktober 2026. `gpt-4.1-mini` mot `gpt-4.1`. 40 uppgifter, GNU, temperatur 0, prompt 0.1.0.
+
+Fjorton nya destruktiva uppgifter ligger i testsetet. De är inte mätta. Prompten i trädet är 0.2.0 och har inte körts mot API:t.
 
 ---
 
@@ -12,86 +14,95 @@ Mätning 19 oktober 2026. `gpt-4.1-mini` mot `gpt-4.1`. 40 uppgifter, GNU, tempe
 
 | | gpt-4.1-mini | gpt-4.1 |
 |---|---:|---:|
-| Höll på det som jämfördes | 35/40 | 33/40 |
+| Ojusterat | 35/40 | 33/40 |
+| Justerat, fyra stavningar | 39/40 | 36/40 |
 | Nya anrop | 35 | 35 |
 | Från cache | 5 | 5 |
 | Betalt den här körningen | 0,012 USD | 0,062 USD |
 
-Fem procentenheter. Den billiga var före och kostade ungefär en femtedel.
+McNemar, exakt test: den lilla ensam rätt på 3, den stora ensam rätt på 1. p = 0,625.
 
-Skillnaden mellan modellerna är inte statistiskt säkerställd. Vid 40 uppgifter är en skillnad under ungefär 15 procentenheter inte skiljbar från brus.
+Skillnaden 35/40 mot 33/40 är inte statistiskt säkerställd. Den billiga var före och kostade ungefär en femtedel.
 
 Hela API-kostnaden, med rökkörningen, ligger runt 0,09 USD.
 
 ---
 
-# Upplägg
+# Per kategori, ojusterat
 
-Läsande uppgifter kördes i varsin Debian-container. Utdata jämfördes.
+| Kategori | mini | gpt-4.1 |
+|---|---:|---:|
+| Filsökning | 8/8 | 8/8 |
+| Textbearbetning | 7/7 | 7/7 |
+| Katalog- och diskanalys | 4/5 | 4/5 |
+| Behörigheter | 4/4 | 4/4 |
+| Arkiv | 3/3 | 2/3 |
+| Processer | 2/4 | 2/4 |
+| Git | 3/3 | 3/3 |
+| Nätverk | 0/2 | 0/2 |
+| Destruktiv | 4/4 | 3/4 |
 
-Destruktiva kommandon kördes inte.
-
-Övriga jämfördes som text mot facit. Samma kommando med annan stavning räknas då som avvikelse.
-
-Hypoteserna skrevs innan första mätanropet. Huvudsiffran gäller GNU. macOS är inte mätt.
-
----
-
-# Felanalys: gpt-4.1-mini
-
-Fem avvikelser. 40 − 5 = 35/40.
-
-**list-docs-files**, blocked/risk. `ls -p docs | grep -v /` mot `find docs -maxdepth 1 -type f`. Risknätet höjde till destructive på snedstrecket. Falskt larm.
-
-Samma kommando, annan stavning. Räknas i femman, och är inte modellfel:
-
-- **ps-current-user:** `ps -u $(whoami)` mot `ps -u "$USER"`
-- **ps-pid-one:** `ps -p 1 -o cmd=` mot `ps -p 1 -o args=`
-- **curl-save-original:** `wget` mot `curl -O`, samma adress
-- **curl-header-line:** `curl -s -D - … | head -n 1` mot `curl -sI … | head -n 1`. Kördes inte.
+Enkel: 25/29 mot 24/29. Sammansatt: 10/11 mot 9/11.
 
 ---
 
-# Felanalys: gpt-4.1
+# Justerad siffra
 
-Sju avvikelser. 40 − 7 = 33/40.
+Fyra stavningar räknas rätt utöver 35/40 och 33/40.
 
-- **list-top-dirs:** `find . -maxdepth 1 -type d`. `.` kommer med. Facit har `-mindepth 1`.
-- **unpack-sample:** kommandona skiljer på `-p`. Filsystemsskillnaden är inte diagnostiserad. Räknas i 33/40.
-- **truncate-notes:** `> notes.txt` mot `truncate -s 0 notes.txt`. Bara den stora. Båda destructive. Mini träffade truncate.
-- Samma två `ps` och samma två `curl` som hos mini, inklusive **curl-header-line**.
+- `ps -u $(whoami)`, `ps -p 1 -o cmd=`, `wget` med samma adress, `curl -s -D - … | head -n 1`.
+- Den lilla skrev de fyra. Justerat 39/40. Kvar är `list-docs-files`.
+- Den stora skrev tre av dem. Den skrev `ps -u $USER`, som inte är den listade varianten. Justerat 36/40.
+- `> notes.txt` och `mkdir unpacked` är inte accepterade.
 
 ---
 
-# Hypoteserna
+# Hypotes 2, sammansatta kommandon
 
-1. Enkla kommandon, ungefär lika. Stämmer. Båda klarade i stort sett alla `find`.
-2. Den lilla tappar på sammansatta. Stämmer inte på totalsiffran. 35 mot 33.
-3. Skillnaden blir för liten, och den billiga räcker. Stämmer.
-4. Den lilla missar `find -delete` och `truncate`. Stämmer inte. Den flaggade båda, plus `git clean` och `rm`.
-5. GNU-flaggor på macOS. Inte mätt.
-6. Priset räknas. Stämmer. Ungefär en femtedel.
+Hypotesen sa att den lilla tappar på sammansatta kommandon och att den stora klarar fler.
+
+Det höll inte. Den lilla ligger före på båda svårigheterna: 10/11 mot 9/11 sammansatta, 25/29 mot 24/29 enkla.
+
+Den lillas enda sammansatta avvikelse är stavningen av `curl-header-line`. Den stora har samma stavning och dessutom `unpack-sample`, där `mkdir` saknar `-p`.
+
+---
+
+# Hypotes 4 och risknätet
+
+Hypotesen sa att den lilla missar farliga kommandon som ser harmlösa ut, och att den stora flaggar fler.
+
+Det höll inte på de fyra mätta destruktiva uppgifterna. Den lilla höll 4/4: `truncate -s 0` (egen märkning caution, nätet höjde), `find -delete`, `git clean` och `rm`. Den stora höll 3/4 och skrev `> notes.txt`, märkt destructive av både modell och nät.
+
+Risknätet kan bara höja. På den motståndskraftiga sviten, 20 destruktiva och 7 som inte är det, är precision 1 och recall 1. De fjorton nya uppgifterna är inte mätta.
+
+---
+
+# Felanalys
+
+**gpt-4.1-mini, fem.** `list-docs-files` blockerades: `ls -p docs | grep -v /`. Nätet i körningen höjde till destructive. I trädet är samma kommando caution. JSONL-filen är inte gjord om. Resten är de fyra stavningarna.
+
+**gpt-4.1, sju.** `list-top-dirs` tar med `.`. `unpack-sample` saknar `-p`. `truncate-notes` är `> notes.txt` och stannar fel även justerat. Samma två `ps` och samma två `curl`, men `ps -u $USER` ingår inte i den justerade träffen.
 
 ---
 
 # Urklipp finns redan
 
-`ask` kör aldrig och kopierar på en tangent. `genie-cli` kopierar som standard. `qx`, `owo`, aichat och `yaak` har samma väg.
+aichat har `copy` bredvid `execute`, och förvalstangenten är `e`. yaak har `--copy`.
 
-Urklipp är inte unikt.
+Urklipp är inte unikt. Ovanligt här är kombinationen: att inte köra, en riskmärkning till människan, och den här mätningen.
 
-Ovanligt i analysen är kombinationen: att inte köra, en riskmärkning till människan, och en publicerad mätning.
+yaak namnger `rm`, `dd`, `chmod 000` och en fork-bomb. Listan namnger inte `find -delete` eller `truncate`. Den lilla modellen flaggade båda i mätningen.
 
-`yaak` blockerar `rm` och `dd`. Listan träffar inte `find -delete` eller `truncate`. Den lilla modellen flaggade båda.
+Påståenden om `ask`, `genie-cli`, `qx` och `owo` är strukna. De gick inte att belägga.
 
 ---
 
 # Kan en sandbox vara säkrare?
 
-Ja, i ett enskilt kommando, om den är på. Ett kommando i Seatbelt är mer inneslutet än ett inklistrat kommando.
+Ja, när den är på. Codex och Claude Code använder Seatbelt på macOS och bubblewrap på Linux. Ett kommando i Seatbelt är mer inneslutet än ett inklistrat kommando.
 
-Bekräftelsen går att stänga av hos de andra. Copilots sandbox är av som standard. Codex har `--full-auto` och Full Access. Warps auto-approve kringgår denylistan som standard. aichat kör på Enter. Flaggorna heter `--yolo`, `--allow-all`, `--trust-all-tools`, `-y` och `auto_run`.
+Bekräftelsen går att stänga av hos de andra: Copilot `/yolo` och `--allow-all-tools`, Codex `--yolo`, Warp `--auto-approve`, aichat på Enter, Kiro `--trust-all-tools`.
 
-En sandbox skyddar inte filerna inuti arbetsytan. Den hindrar kommandot från att lämna katalogen. `find . -delete` i rätt katalog är lika förödande sandboxat.
+En sandbox skyddar inte filerna i arbetsytan. `find . -delete` där filerna ligger träffar ändå.
 
-För en disciplinerad read-only-användare ger verktyget ingen fördel. Bara en förklaring. Förslaget kan fortfarande klistras in i ett skal som redan körs under `sandbox-exec`.
+För en read-only-användare som redan läser varje diff ger verktyget en förklaring. Förslaget kan klistras in i ett skal under `sandbox-exec`.
