@@ -13,6 +13,14 @@ def test_two_generations_match(tmp_path):
     assert (first / "empty").is_dir()
     assert (first / "docs" / "readme-link.txt").is_symlink()
     assert (first / "src" / "app.sh").stat().st_mode & 0o111 == 0
+    assert (first / "data" / "empty.dat").stat().st_size == 0
+    assert (first / "data" / "words.txt").read_text(encoding="utf-8").splitlines() == [
+        "beta",
+        "alpha",
+        "beta",
+        "alpha",
+        "gamma",
+    ]
 
 
 def test_refuses_a_non_empty_directory(tmp_path):

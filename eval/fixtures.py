@@ -37,6 +37,8 @@ def generate(root: Path, *, seed: int = SEED) -> Path:
     _write(root / "tmp" / "cache.tmp", "temp\n", mtime=MTIME_OLD)
     _write(root / "tmp" / "old file.tmp", "temp\n", mtime=MTIME_OLD)
     _write(root / "notes.txt", "foo and more foo\n", mtime=MTIME_NEW)
+    _write(root / "data" / "words.txt", "beta\nalpha\nbeta\nalpha\ngamma\n", mtime=MTIME_OLD)
+    _write(root / "data" / "empty.dat", b"", mtime=MTIME_OLD)
     _write(root / "big" / "small.pdf", b"%PDF-1.4\n" + b"x" * 128, mtime=MTIME_OLD)
     _write_sparse_pdf(root / "big" / "large.pdf")
     _write_archive(root / "archives" / "sample.tar.gz")
