@@ -9,6 +9,7 @@ from eval.analyze import (
     format_report,
     load_jsonl,
     mcnemar_exact,
+    median_latency_ms,
 )
 from eval.runner import load_tasks
 
@@ -103,6 +104,10 @@ def test_measured_jsonl_matches_the_known_run():
     assert "adjusted: 39/40" in report
     assert "adjusted: 37/40" in report
     assert "p-value: 0.625000" in report
+    assert f"median latency_ms: {median_latency_ms(mini):.1f}" in report
+    assert f"median latency_ms: {median_latency_ms(gpt):.1f}" in report
+    assert median_latency_ms(mini) == pytest.approx(1226.4496074999442)
+    assert median_latency_ms(gpt) == pytest.approx(1341.1103935000028)
     mini_truncate = next(row for row in mini if row["task_id"] == "truncate-notes")
     assert mini_truncate["model_risk"] == "caution"
     assert mini_truncate["net_risk"] == "destructive"

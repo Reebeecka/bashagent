@@ -12,10 +12,12 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import statistics
 from pathlib import Path
 from typing import Any
 
 from eval.compare import variant_match
+from eval.held_out import held_out_labels, held_out_recall
 from eval.runner import DEFAULT_TASKS, load_tasks
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -179,6 +181,14 @@ def adversarial_precision_recall(home: Path | None = None) -> dict[str, float | 
     }
 
 
+def median_latency_ms(rows: list[dict[str, Any]]) -> float:
+    """Median of the recorded ``latency_ms`` values. Even counts average the middle pair."""
+    values = [float(row["latency_ms"]) for row in rows]
+    if not values:
+        raise ValueError("no latency values")
+    return float(statistics.median(values))
+
+
 def destructive_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [row for row in rows if row.get("category") == "destruktiv"]
 
@@ -211,6 +221,7 @@ def format_report(
             lines.append(f"    {label}: {group_hits}/{group_total}")
         adjusted_hits, adjusted_total = adjusted_counts(rows, by_id, platform)
         lines.append(f"  adjusted: {adjusted_hits}/{adjusted_total}")
+        lines.append(f"  median latency_ms: {median_latency_ms(rows):.1f}")
         lines.append("  destructive:")
         for row in destructive_rows(rows):
             lines.append(
@@ -252,6 +263,14 @@ def main(argv: list[str] | None = None) -> int:
         f"(tp={scores['true_positive']} fp={scores['false_positive']} "
         f"fn={scores['false_negative']} tn={scores['true_negative']})"
     )
+    labels = held_out_labels()
+    marked = sum(level == "destructive" for _, level in labels)
+    print(
+        "risk net held-out: "
+        f"recall {held_out_recall():.3f} ({marked}/{len(labels)} marked destructive)"
+    )
+    for command, level in labels:
+        print(f"  {level}  {command}")
     return 0
 
 

