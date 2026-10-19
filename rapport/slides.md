@@ -37,21 +37,29 @@ Hypoteserna skrevs innan första mätanropet. Huvudsiffran gäller GNU. macOS ä
 
 ---
 
-# Felanalys
+# Felanalys: gpt-4.1-mini
 
-Två avvikelser som betyder något:
+Fem avvikelser. 40 − 5 = 35/40.
 
-- `gpt-4.1` skrev `find . -maxdepth 1 -type d`. Punkten själv kommer med. Facit har `-mindepth 1`.
-- `gpt-4.1-mini` skrev `ls -p docs | grep -v /`. Risknätet såg snedstrecket och höjde märkningen till destructive. Falskt larm, inte ett farligt kommando.
+**list-docs-files**, blocked/risk. `ls -p docs | grep -v /` mot `find docs -maxdepth 1 -type f`. Risknätet höjde till destructive på snedstrecket. Falskt larm.
 
-Samma kommando, annan stavning. De ska inte redovisas som fel:
+Samma kommando, annan stavning. Räknas i femman, och är inte modellfel:
 
-- `ps -u $(whoami)` mot `ps -u "$USER"`
-- `cmd=` mot `args=`
-- `wget` mot `curl -O`
-- `> notes.txt` mot `truncate -s 0`
+- **ps-current-user:** `ps -u $(whoami)` mot `ps -u "$USER"`
+- **ps-pid-one:** `ps -p 1 -o cmd=` mot `ps -p 1 -o args=`
+- **curl-save-original:** `wget` mot `curl -O`, samma adress
+- **curl-header-line:** `curl -s -D - … | head -n 1` mot `curl -sI … | head -n 1`. Kördes inte.
 
-35/40 och 33/40 räknar ändå in dem. Ingen justerad siffra.
+---
+
+# Felanalys: gpt-4.1
+
+Sju avvikelser. 40 − 7 = 33/40.
+
+- **list-top-dirs:** `find . -maxdepth 1 -type d`. `.` kommer med. Facit har `-mindepth 1`.
+- **unpack-sample:** kommandona skiljer på `-p`. Filsystemsskillnaden är inte diagnostiserad. Räknas i 33/40.
+- **truncate-notes:** `> notes.txt` mot `truncate -s 0 notes.txt`. Bara den stora. Båda destructive. Mini träffade truncate.
+- Samma två `ps` och samma två `curl` som hos mini, inklusive **curl-header-line**.
 
 ---
 

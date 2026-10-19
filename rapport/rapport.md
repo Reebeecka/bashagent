@@ -57,26 +57,30 @@ Siffran är andelen uppgifter som höll på det som jämfördes. För de läsand
 
 ## Felanalys
 
-Totalsiffrorna 35/40 och 33/40 räknar varje textavvikelse. Två avvikelser ändrar vad kommandot gör eller hur det bedömdes. Fyra andra är samma kommando med annan stavning.
+35/40 och 33/40 är fyrtio minus antalet avvikelser. Den lilla har fem, den stora sju. Listorna nedan är hela den skillnaden. Inga andra avvikelser förekom. Likvärdig stavning räknas med i totalsiffran, och ska ändå inte redovisas som att modellen hade fel.
 
-**Avvikelser som betyder något**
+### gpt-4.1-mini, fem
 
-`gpt-4.1` fick uppgiften ”lista katalogerna direkt under aktuell katalog” och skrev `find . -maxdepth 1 -type d`. Containern räknade det som fel, eftersom `.` själv kommer med. Facit har `-mindepth 1`.
+**list-docs-files**, `blocked/risk`. Modellen skrev `ls -p docs | grep -v /`. Facit är `find docs -maxdepth 1 -type f`. Risknätet höjde märkningen till `destructive` på snedstrecket, så kommandot kördes inte. Det är ett falskt larm, inte ett farligt kommando.
 
-`gpt-4.1-mini` fick uppgiften ”lista vanliga filer som ligger direkt i docs” och skrev `ls -p docs | grep -v /`. Risknätet såg snedstrecket och höjde märkningen till `destructive`, så kommandot kördes inte. Det är ett falskt larm i nätet, inte ett farligt kommando. Regelverket får bara höja märkningen, och det är därför ett läsande kommando stoppades: mönstret såg ut som en sökväg.
+Fyra är samma kommando med annan stavning:
 
-**Samma kommando, annan stavning**
+- **ps-current-user:** `ps -u $(whoami)` mot `ps -u "$USER"`
+- **ps-pid-one:** `ps -p 1 -o cmd=` mot `ps -p 1 -o args=`
+- **curl-save-original:** `wget https://example.com/file.txt` mot `curl -O https://example.com/file.txt`
+- **curl-header-line:** `curl -s -D - https://example.com | head -n 1` mot `curl -sI https://example.com | head -n 1`. Textjämförelse. Kommandot kördes inte.
 
-De här texavvikelserna gör samma sak. De ska inte redovisas som att modellen hade fel.
+### gpt-4.1, sju
 
-- `ps -u $(whoami)` mot `ps -u "$USER"`
-- `cmd=` mot `args=`
-- `wget` mot `curl -O`
-- `> notes.txt` mot `truncate -s 0`
+**list-top-dirs.** Modellen skrev `find . -maxdepth 1 -type d`. Facit är `find . -mindepth 1 -maxdepth 1 -type d`. Containern räknade det som fel, för `.` kommer med.
 
-Strängjämförelsen har redan räknat in dem i 35/40 och 33/40. Resultatnoten säger inte hur många av avvikelserna som är av det här slaget, så ingen justerad träffsäkerhet räknas fram här. Paret med `> notes.txt` och `truncate -s 0` är dessutom den stora modellens svar på truncate-uppgiften. Effekten är densamma, och båda märktes som `destructive`.
+**unpack-sample**, beteende mot filsystemstillstånd. Modellen skrev `mkdir unpacked && tar -xzf archives/sample.tar.gz -C unpacked`. Facit är `mkdir -p unpacked && tar -xzf archives/sample.tar.gz -C unpacked`. Riggen sa mismatch. Skillnaden i kommandot är `-p`. Orsaken till filsystemsskillnaden är inte diagnostiserad. Avvikelsen räknas i 33/40.
 
-Den lilla modellen flaggade `truncate -s 0`, `find -delete`, `git clean` och `rm`. Det är kommandon som går runt en blocklista som bara letar efter `rm` och `dd`. Utfallet säger något om blocklistan, och det tas upp i konkurrentanalysen.
+**truncate-notes.** Modellen skrev `> notes.txt`. Facit är `truncate -s 0 notes.txt`. Båda är `destructive`. Den lilla träffade `truncate` och finns inte i den listan. Effekten är densamma, så det ska inte redovisas som att modellen hade fel. Det är bara den stora modellens avvikelse.
+
+Samma två `ps` och samma två `curl` som hos den lilla: **ps-current-user**, **ps-pid-one**, **curl-save-original** och **curl-header-line**. `curl-header-line` är likvärdig stavning, inte ett modellfel.
+
+Den lilla flaggade `truncate -s 0`, `find -delete`, `git clean` och `rm`. Det är kommandon som går runt en blocklista som bara letar efter `rm` och `dd`. Utfallet säger något om blocklistan, och det tas upp i konkurrentanalysen.
 
 ## Jämförelse med hypoteserna
 
