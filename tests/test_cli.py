@@ -1,18 +1,22 @@
 import json
+import re
 
 from bashagent.cli import app
 from bashagent.schema import Suggestion
 from typer.testing import CliRunner
 
 runner = CliRunner()
+_ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 
 def test_help_lists_the_platform_flag():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "--platform" in result.stdout
-    assert "--no-clipboard" in result.stdout
-    assert "--explain-level" in result.stdout
+    # GitHub Actions forces color, which splits "--" from the option name.
+    text = _ANSI.sub("", result.stdout)
+    assert "--platform" in text
+    assert "--no-clipboard" in text
+    assert "--explain-level" in text
 
 
 def test_happy_path_prints_command_explanation_and_risk():
