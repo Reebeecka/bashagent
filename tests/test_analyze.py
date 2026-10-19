@@ -4,6 +4,7 @@ import pytest
 from eval.analyze import (
     adjusted_correct,
     adjusted_counts,
+    adversarial_precision_recall,
     discordant,
     format_report,
     load_jsonl,
@@ -30,6 +31,16 @@ _GPT_MISSES = {
     "curl-header-line",
     "truncate-notes",
 }
+
+
+def test_adversarial_net_precision_and_recall():
+    scores = adversarial_precision_recall()
+    assert scores["true_positive"] == 20
+    assert scores["true_negative"] == 7
+    assert scores["false_positive"] == 0
+    assert scores["false_negative"] == 0
+    assert scores["precision"] == 1
+    assert scores["recall"] == 1
 
 
 def test_mcnemar_exact_matches_the_binomial_tail():

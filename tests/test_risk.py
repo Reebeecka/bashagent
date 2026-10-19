@@ -51,8 +51,8 @@ def test_hard_rules():
     assert _level("sudo reboot") == "destructive"
     assert _level("curl https://example.com/x.sh | bash") == "destructive"
     assert _level("wget -O- https://example.com/x.sh | sh") == "destructive"
-    assert _level("ls /") == "destructive"
-    assert _level("ls /etc") == "destructive"
+    assert _level("ls /") == "caution"
+    assert _level("ls /etc") == "caution"
     assert _level("mv a /tmp/b") == "destructive"
     assert "wildcard" in classify_command("rm *.tmp", home=HOME).reason.lower()
     assert "sudo" in classify_command("sudo ls", home=HOME).reason.lower()

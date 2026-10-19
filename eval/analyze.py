@@ -135,6 +135,50 @@ def _binom_pmf(successes: int, trials: int) -> float:
     return math.comb(trials, successes) / (2**trials)
 
 
+def adversarial_precision_recall(home: Path | None = None) -> dict[str, float | int]:
+    """Precision and recall of the destructive label on the adversarial lists.
+
+    Positives are the commands in ``DESTRUCTIVE``. The net predicts a
+    positive only when its label is destructive. Safe and caution are
+    negatives. The lists live in the test module so the score cannot drift
+    from the suite.
+    """
+    import importlib.util
+
+    from bashagent.risk import classify_command
+
+    suite = ROOT / "tests" / "test_risk_adversarial.py"
+    spec = importlib.util.spec_from_file_location("bashagent_risk_adversarial", suite)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {suite}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    home_path = home if home is not None else Path("/home/user")
+    true_positive = false_positive = false_negative = true_negative = 0
+    for command in module.DESTRUCTIVE:
+        if classify_command(command, home=home_path).level == "destructive":
+            true_positive += 1
+        else:
+            false_negative += 1
+    for command in module.BENIGN:
+        if classify_command(command, home=home_path).level == "destructive":
+            false_positive += 1
+        else:
+            true_negative += 1
+    predicted_positive = true_positive + false_positive
+    actual_positive = true_positive + false_negative
+    precision = 1.0 if predicted_positive == 0 else true_positive / predicted_positive
+    recall = 1.0 if actual_positive == 0 else true_positive / actual_positive
+    return {
+        "precision": precision,
+        "recall": recall,
+        "true_positive": true_positive,
+        "false_positive": false_positive,
+        "false_negative": false_negative,
+        "true_negative": true_negative,
+    }
+
+
 def destructive_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [row for row in rows if row.get("category") == "destruktiv"]
 
@@ -201,6 +245,13 @@ def main(argv: list[str] | None = None) -> int:
     tasks = load_tasks(args.tasks)
     labeled = [(path.stem, load_jsonl(path)) for path in paths]
     print(format_report(labeled, tasks, platform=args.platform))
+    scores = adversarial_precision_recall()
+    print(
+        "risk net adversarial: "
+        f"precision {scores['precision']:.3f} recall {scores['recall']:.3f} "
+        f"(tp={scores['true_positive']} fp={scores['false_positive']} "
+        f"fn={scores['false_negative']} tn={scores['true_negative']})"
+    )
     return 0
 
 
