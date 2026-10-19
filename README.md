@@ -42,7 +42,7 @@ uv run bashagent "visa de fem största filerna" --provider openai --platform aut
 |---|---|---|
 | `OPENAI_API_KEY` | Required only for `--provider openai` | unset |
 | `BASHAGENT_PROVIDER` | `fake` or `openai` | `fake` |
-| `BASHAGENT_MODEL` | Model id sent to OpenAI | `gpt-5-mini` |
+| `BASHAGENT_MODEL` | Model id sent to OpenAI | `gpt-4.1-mini` |
 | `BASHAGENT_PLATFORM` | `auto`, `bsd`, or `gnu` | `auto` |
 | `BASHAGENT_EXPLAIN_LEVEL` | `kort` or `lång` | `kort` |
 | `BASHAGENT_MAX_OUTPUT_TOKENS` | Cap on the model output | `400` |
@@ -74,7 +74,7 @@ cli → config → prompt (system prompt + platform + a few examples)
       render               clipboard
 ```
 
-Responses are cached on disk. The cache key is a SHA-256 of the system prompt, user prompt, prompt version, model id, temperature, output-token cap, platform mode, and JSON schema.
+Responses are cached on disk. The cache key is a SHA-256 of the provider, system prompt, user prompt, prompt version, model id, temperature, output-token cap, platform mode, and JSON schema.
 
 ## Evaluation
 

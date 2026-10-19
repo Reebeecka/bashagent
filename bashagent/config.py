@@ -17,7 +17,9 @@ from bashagent.platform import CHOICES
 from bashagent.prompt import MAX_OUTPUT_TOKENS, TEMPERATURE, ExplainLevel
 
 DEFAULT_PROVIDER = "fake"
-DEFAULT_MODEL = "gpt-5-mini"
+# gpt-5-mini rejects temperature 0. The measurement needs temperature 0,
+# so the default is a small model that accepts it.
+DEFAULT_MODEL = "gpt-4.1-mini"
 EXPLAIN_LEVELS = frozenset({"kort", "lång"})
 PROVIDERS = frozenset({"fake", "openai"})
 

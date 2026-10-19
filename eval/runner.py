@@ -144,6 +144,7 @@ def run_eval(
             max_output_tokens=400,
             platform_mode=platform_mode,
             json_schema=SUGGESTION_JSON_SCHEMA,
+            provider=provider_name,
         )
         response = None if no_cache else cache.get(identity)
         if response is None:

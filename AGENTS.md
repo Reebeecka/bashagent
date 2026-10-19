@@ -20,7 +20,7 @@ The current `eval/tasks.yaml` is a draft of 40 tasks. `authoring_model` is `none
 
 ## Cache
 
-Cache every model response. The key is a hash of the whole call identity: system prompt, user prompt, prompt version, model id, temperature, max output tokens, platform mode, and JSON schema. Do not bypass the cache while developing. Latency numbers come from the real call stored in the cache entry, not from a later cache hit.
+Cache every model response. The key is a hash of the whole call identity: provider, system prompt, user prompt, prompt version, model id, temperature, max output tokens, platform mode, and JSON schema. Do not bypass the cache while developing. Latency numbers come from the real call stored in the cache entry, not from a later cache hit.
 
 ## Commits
 

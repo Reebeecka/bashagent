@@ -49,7 +49,9 @@ def test_request_shape_uses_an_injected_opener_instead_of_the_network():
             }
             return json.dumps(body).encode("utf-8")
 
-    def opener(request, timeout: float):
+    def opener(request, data=None, *, timeout: float):
+        # urlopen treats a second positional argument as the body, not the timeout.
+        assert data is None
         captured["url"] = request.full_url
         captured["timeout"] = timeout
         captured["body"] = json.loads(request.data.decode("utf-8"))
