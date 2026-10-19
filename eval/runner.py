@@ -8,6 +8,7 @@ tasks by running them. Destructive commands are never executed.
 from __future__ import annotations
 
 import argparse
+import json
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -55,6 +56,56 @@ _METHODS = frozenset({"behavior", "variants"})
 _RISKS = frozenset({"safe", "caution", "destructive"})
 _DIFFICULTIES = frozenset({"enkel", "sammansatt"})
 _REFERENCE_KEYS = frozenset({"default", "gnu", "bsd", "status"})
+
+
+def build_result(
+    task: dict[str, Any],
+    *,
+    command: str,
+    correct: bool,
+    model_risk: str,
+    net_risk: str,
+    input_tokens: int,
+    output_tokens: int,
+    cost: float | None,
+    latency_ms: float,
+) -> dict[str, Any]:
+    """One JSON object for ``rapport/results/<model>.jsonl``.
+
+    ``correct`` is the unadjusted comparison: the command held and the net's
+    label matches the task. Token counts, cost, and latency come from the
+    stored response. Cost is null when the model has no price row.
+    """
+    return {
+        "task_id": str(task["id"]),
+        "category": str(task["category"]),
+        "difficulty": str(task["difficulty"]),
+        "command": command,
+        "correct": correct,
+        "model_risk": model_risk,
+        "net_risk": net_risk,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "tokens": input_tokens + output_tokens,
+        "cost_usd": cost,
+        "latency_ms": latency_ms,
+    }
+
+
+def write_results(directory: Path, model: str, records: list[dict[str, Any]]) -> Path:
+    """Replace ``directory/<model>.jsonl`` with one object per task."""
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"{model}.jsonl"
+    text = "".join(json.dumps(record, ensure_ascii=False) + "\n" for record in records)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def _priced(model: str, input_tokens: int, output_tokens: int) -> float | None:
+    try:
+        return cost_usd(model, input_tokens, output_tokens)
+    except UnpricedModelError:
+        return None
 
 
 def load_tasks(path: Path) -> list[dict[str, Any]]:
@@ -130,6 +181,8 @@ def run_eval(
     model: str = FAKE_MODEL,
     max_run_cost_usd: float = DEFAULT_CAP_USD,
     execute_reading: bool | None = None,
+    cache_only: bool = False,
+    results_dir: Path | None = None,
 ) -> int:
     tasks = load_tasks(tasks_path)
     if smoke_only:
@@ -151,11 +204,13 @@ def run_eval(
     _check_fixture()
     live = provider_name == "openai"
     compare_reads = live if execute_reading is None else execute_reading
-    try:
-        provider = get_provider(provider_name, model=model)
-    except ProviderError as exc:
-        print(exc)
-        return 1
+    provider = None
+    if not cache_only:
+        try:
+            provider = get_provider(provider_name, model=model)
+        except ProviderError as exc:
+            print(exc)
+            return 1
     if compare_reads and any(is_reading_task(task) for task in tasks):
         try:
             prepare_containers()
@@ -165,6 +220,7 @@ def run_eval(
     cache = DiskCache(cache_dir)
     ledger = Ledger(cap_usd=max_run_cost_usd)
     rows: list[tuple[str, str, str]] = []
+    records: list[dict[str, Any]] = []
     failures = 0
     for task in tasks:
         if live and ledger.paid_calls and ledger.paid_usd >= ledger.cap_usd:
@@ -193,6 +249,10 @@ def run_eval(
         cached = None if no_cache else cache.get(identity)
         paid = cached is None
         if cached is None:
+            if cache_only or provider is None:
+                print(f"No cached response for {task['id']} ({model}).")
+                _print_report(rows, resolved, ledger, live=live)
+                return 1
             try:
                 response = provider.complete(
                     CompletionRequest(
@@ -224,15 +284,46 @@ def run_eval(
                 print(exc)
                 _print_report(rows, resolved, ledger, live=live)
                 return 2
+        price = _priced(model, response.input_tokens, response.output_tokens)
         try:
-            suggestion = apply_risk_net(parse_suggestion(response.text))
+            parsed = parse_suggestion(response.text)
         except SchemaError:
             rows.append((task["id"], "-", "unparseable"))
+            records.append(
+                build_result(
+                    task,
+                    command="",
+                    correct=False,
+                    model_risk="",
+                    net_risk="",
+                    input_tokens=response.input_tokens,
+                    output_tokens=response.output_tokens,
+                    cost=price,
+                    latency_ms=response.latency_ms,
+                )
+            )
             failures += 1
             continue
+        suggestion = apply_risk_net(parsed)
         outcome = _outcome(task, suggestion.command, suggestion.risk, resolved, compare_reads)
         rows.append((task["id"], suggestion.risk, outcome))
+        records.append(
+            build_result(
+                task,
+                command=suggestion.command,
+                correct=outcome == "match",
+                model_risk=parsed.risk,
+                net_risk=suggestion.risk,
+                input_tokens=response.input_tokens,
+                output_tokens=response.output_tokens,
+                cost=price,
+                latency_ms=response.latency_ms,
+            )
+        )
     _print_report(rows, resolved, ledger, live=live)
+    if results_dir is not None:
+        written = write_results(results_dir, model, records)
+        print(f"results: {written}")
     return 1 if failures else 0
 
 
@@ -302,6 +393,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--no-cache", action="store_true")
     parser.add_argument("--max-run-cost-usd", type=float, default=DEFAULT_CAP_USD)
+    parser.add_argument(
+        "--results-dir",
+        type=Path,
+        help="Write one JSON object per task to <model>.jsonl in this directory.",
+    )
+    parser.add_argument(
+        "--cache-only",
+        action="store_true",
+        help="Use the disk cache and do not call the provider.",
+    )
     args = parser.parse_args(argv)
     load_dotenv(Path(__file__).resolve().parents[1] / ".env")
     blocked = refuse_reason(args.model)
@@ -320,6 +421,8 @@ def main(argv: list[str] | None = None) -> int:
         no_cache=args.no_cache,
         model=args.model,
         max_run_cost_usd=args.max_run_cost_usd,
+        cache_only=args.cache_only,
+        results_dir=args.results_dir,
     )
 
 

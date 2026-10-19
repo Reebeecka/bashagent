@@ -658,6 +658,8 @@ tasks:
     reference:
       status: draft
       default: "ps -u \"$USER\""
+    accepted_variants:
+      - "ps -u $(whoami)"
     fixture: standard
     notes: "Not executed. GNU and BSD ps both take -u user."
 
@@ -673,6 +675,8 @@ tasks:
     reference:
       status: draft
       default: "ps -p 1 -o args="
+    accepted_variants:
+      - "ps -p 1 -o cmd="
     fixture: standard
     notes: "Not executed. args= is accepted by both GNU and BSD ps."
 
@@ -756,6 +760,7 @@ tasks:
       default: "curl -O https://example.com/file.txt"
     accepted_variants:
       - "curl --remote-name https://example.com/file.txt"
+      - "wget https://example.com/file.txt"
     fixture: standard
     notes: "Not executed. -O writes file.txt in the current directory."
 
@@ -771,6 +776,8 @@ tasks:
     reference:
       status: draft
       default: "curl -sI https://example.com | head -n 1"
+    accepted_variants:
+      - "curl -s -D - https://example.com | head -n 1"
     fixture: standard
     notes: "Not executed. -sI fetches headers and does not save a body. A pipe, so the task is sammansatt."
 

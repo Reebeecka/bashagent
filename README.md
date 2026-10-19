@@ -97,7 +97,9 @@ The key is read from `.env` and is never printed. Temperature is 0. `gpt-5-mini`
 
 `make validate-tasks` runs each non-destructive behavior reference in one Debian container (`debian:bookworm-slim`, `--memory=512m --pids-limit=256 --cpus=1 --network=none`) and checks it against the fixture. The fixture is copied onto the container's writable layer. Destructive tasks are skipped and are never run. Variant tasks (git, network, processes) are skipped too. Docker is required for that target only.
 
-`eval/tasks.yaml` is a 40-task draft. `authoring_model` is `none`: the references were written by hand, not by either model that will later be measured. Every reference is marked draft. A green `make validate-tasks` checks the GNU command. It does not turn the file into a measurement, and there is no results table yet.
+`eval/tasks.yaml` is a 40-task draft. `authoring_model` is `none`: the references were written by hand, not by either model that will later be measured. Every reference is marked draft. A green `make validate-tasks` checks the GNU command. It does not turn the file into a measurement.
+
+`eval/runner.py --results-dir rapport/results --cache-only` writes one JSON object per task to `rapport/results/<model>.jsonl` from the disk cache and does not call the provider. `python -m eval.analyze` prints accuracy, an adjusted score that also accepts listed spelling variants, McNemar's exact test, and the model's own risk label next to the net's label on destructive tasks. The committed JSONL files are the cached GNU run at prompt version 0.1.0.
 
 ## Limitations
 
