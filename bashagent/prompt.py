@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-PROMPT_VERSION = "0.1.0"
+PROMPT_VERSION = "0.2.0"
 TEMPERATURE = 0.0
 MAX_OUTPUT_TOKENS = 400
 
@@ -76,6 +76,13 @@ Beskrivning: visa de tio senaste raderna i loggen
 {{"command": "tail -n 10 log.txt",
  "explanation": "tail skriver ut de tio sista raderna i log.txt.",
  "risk": "safe", "risk_reason": "Kommandot läser bara filen.",
+ "platform_notes": "Fungerar lika på BSD och GNU."}}
+
+Beskrivning: ta bort alla .tmp-filer rekursivt
+{{"command": "find . -type f -name '*.tmp' -delete",
+ "explanation": "find letar upp .tmp-filer och tar bort dem.",
+ "risk": "destructive",
+ "risk_reason": "Kommandot raderar filer, även om det inte heter rm.",
  "platform_notes": "Fungerar lika på BSD och GNU."}}
 
 Promptversion: {prompt_version}

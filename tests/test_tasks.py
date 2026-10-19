@@ -11,20 +11,20 @@ _COUNTS = {
     "processer": 4,
     "git": 3,
     "nätverk": 2,
-    "destruktiv": 4,
+    "destruktiv": 18,
 }
 _PLATFORM_SPLIT = {"sed-in-place", "stat-large-pdf", "ps-top-memory"}
 
 
-def test_draft_has_forty_tasks_in_the_planned_categories():
+def test_draft_has_fifty_four_tasks_in_the_planned_categories():
     tasks = load_tasks_from_repo()
-    assert len(tasks) == 40
+    assert len(tasks) == 54
     counts = {name: 0 for name in _COUNTS}
     for task in tasks:
         counts[task["category"]] += 1
     assert counts == _COUNTS
     assert sum(task["method"] == "behavior" for task in tasks) == 27
-    assert sum(task["method"] == "variants" for task in tasks) == 13
+    assert sum(task["method"] == "variants" for task in tasks) == 27
     assert all(task["draft"] is True and task["measurement"] is False for task in tasks)
     assert all(task["reference"]["status"] == "draft" for task in tasks)
     assert all(task["authoring_model"] == "none" for task in tasks)

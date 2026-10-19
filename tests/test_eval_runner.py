@@ -47,7 +47,7 @@ def test_results_jsonl_has_one_row_per_task(tmp_path):
         json.loads(line)
         for line in (results / "gpt-4.1-mini.jsonl").read_text(encoding="utf-8").splitlines()
     ]
-    assert len(rows) == 40
+    assert len(rows) == 54
     assert set(rows[0]) == {
         "task_id",
         "category",

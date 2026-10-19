@@ -14,7 +14,7 @@ The report, the slides, and the tool's explanations are Swedish. Code, comments,
 
 ## Ground truth
 
-The current `eval/tasks.yaml` is a draft of 40 tasks. `authoring_model` is `none`: the references were written by hand, not by either model that will be measured, and not by a third model. Every reference is marked `status: draft` and `measurement: false`. Do not cite a run against this file as a result.
+The current `eval/tasks.yaml` is a draft of 54 tasks. `authoring_model` is `none`: the references were written by hand, not by either model that will be measured, and not by a third model. Every reference is marked `status: draft` and `measurement: false`. Do not cite a run against this file as a result.
 
 `make validate-tasks` runs the GNU behavior references in the fixture and is required before any measured run. A reference that fails, exits non-zero, or does something else is not done. Passing that check still does not make the draft a measurement. Destructive commands and `method: variants` are not executed; review those by hand. BSD-only spellings are not executed on Linux.
 
