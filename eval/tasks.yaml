@@ -660,8 +660,9 @@ tasks:
       default: "ps -u \"$USER\""
     accepted_variants:
       - "ps -u $(whoami)"
+      - "ps -u $USER"
     fixture: standard
-    notes: "Not executed. GNU and BSD ps both take -u user."
+    notes: "Not executed. GNU and BSD ps both take -u user. Unquoted $USER is the same command as the quoted facit."
 
   - id: ps-pid-one
     prompt_sv: "visa kommandoraden för processen med pid 1"

@@ -52,12 +52,14 @@ def test_mcnemar_exact_matches_the_binomial_tail():
 def test_adjusted_score_accepts_only_variant_spellings():
     task = {
         "reference": {"default": 'ps -u "$USER"', "status": "draft"},
-        "accepted_variants": ["ps -u $(whoami)"],
+        "accepted_variants": ["ps -u $(whoami)", "ps -u $USER"],
     }
     recorded_miss = {"correct": False, "command": "ps -u $(whoami)"}
+    unquoted_miss = {"correct": False, "command": "ps -u $USER"}
     reference_miss = {"correct": False, "command": 'ps -u "$USER"'}
     other_miss = {"correct": False, "command": "> notes.txt"}
     assert adjusted_correct(recorded_miss, task, "gnu")
+    assert adjusted_correct(unquoted_miss, task, "gnu")
     assert not adjusted_correct(reference_miss, task, "gnu")
     assert not adjusted_correct(other_miss, task, "gnu")
     assert adjusted_correct({"correct": True, "command": "something else"}, task, "gnu")
@@ -66,6 +68,7 @@ def test_adjusted_score_accepts_only_variant_spellings():
 def test_spelling_variants_are_listed_and_the_other_misses_are_not():
     tasks = {task["id"]: task for task in load_tasks(ROOT / "eval" / "tasks.yaml")}
     assert "ps -u $(whoami)" in tasks["ps-current-user"]["accepted_variants"]
+    assert "ps -u $USER" in tasks["ps-current-user"]["accepted_variants"]
     assert "ps -p 1 -o cmd=" in tasks["ps-pid-one"]["accepted_variants"]
     assert "wget https://example.com/file.txt" in tasks["curl-save-original"]["accepted_variants"]
     assert (
@@ -87,7 +90,7 @@ def test_measured_jsonl_matches_the_known_run():
     assert {row["task_id"] for row in gpt if not row["correct"]} == _GPT_MISSES
     tasks = {task["id"]: task for task in load_tasks(ROOT / "eval" / "tasks.yaml")}
     assert adjusted_counts(mini, tasks) == (39, 40)
-    assert adjusted_counts(gpt, tasks) == (36, 40)
+    assert adjusted_counts(gpt, tasks) == (37, 40)
     left_only, right_only = discordant(mini, gpt)
     assert (left_only, right_only) == (3, 1)
     assert mcnemar_exact(left_only, right_only) == 0.625
@@ -98,7 +101,7 @@ def test_measured_jsonl_matches_the_known_run():
     assert "gpt-4.1-mini: 35/40" in report
     assert "gpt-4.1: 33/40" in report
     assert "adjusted: 39/40" in report
-    assert "adjusted: 36/40" in report
+    assert "adjusted: 37/40" in report
     assert "p-value: 0.625000" in report
     mini_truncate = next(row for row in mini if row["task_id"] == "truncate-notes")
     assert mini_truncate["model_risk"] == "caution"

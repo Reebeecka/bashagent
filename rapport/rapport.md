@@ -72,13 +72,13 @@ Siffran är andelen uppgifter som höll på det som jämfördes. För de läsand
 | Enkel | 25/29 | 24/29 |
 | Sammansatt | 10/11 | 9/11 |
 
-Den justerade siffran räknar fyra listade stavningar som rätt, utöver det ojusterade resultatet. `gpt-4.1-mini` får 39/40. `gpt-4.1` får 36/40. Den stora skrev `ps -u $USER` på `ps-current-user`. Den accepterade varianten är `ps -u $(whoami)`, så den raden stannar fel. `> notes.txt` och `mkdir unpacked` är inte accepterade varianter.
+Den justerade siffran räknar de listade stavningarna som rätt, utöver det ojusterade resultatet. `gpt-4.1-mini` får 39/40. `gpt-4.1` får 37/40. Den stora skrev `ps -u $USER` på `ps-current-user`. Det är samma kommando som facit `ps -u "$USER"`, utan citattecken, och räknas rätt i den justerade siffran. `> notes.txt` och `mkdir unpacked` är inte accepterade varianter.
 
 Risknätet kan bara höja en märkning. Efter mätningen fångar det fler mönster som ser harmlösa ut. På den motståndskraftiga sviten, 20 destruktiva kommandon och 7 som inte är det, är precision 1 och recall 1. Det är en kontroll av nätet, inte en ny modellmätning. De fjorton nya destruktiva uppgifterna är inte mätta.
 
 ## Felanalys
 
-35/40 och 33/40 är fyrtio minus antalet ojusterade avvikelser. Den lilla har fem, den stora sju. Listorna nedan är hela den skillnaden. Inga andra avvikelser förekom i de mätta uppgifterna. De fyra stavningarna ingår i de ojusterade talen. I den justerade siffran räknas de som rätt, utom den stora modellens `ps -u $USER`.
+35/40 och 33/40 är fyrtio minus antalet ojusterade avvikelser. Den lilla har fem, den stora sju. Listorna nedan är hela den skillnaden. Inga andra avvikelser förekom i de mätta uppgifterna. Stavningarna ingår i de ojusterade talen. I den justerade siffran räknas de som rätt, även den stora modellens `ps -u $USER`.
 
 ### gpt-4.1-mini, fem
 
@@ -97,9 +97,9 @@ Fyra är samma kommando med annan stavning:
 
 **unpack-sample**, beteende mot filsystemstillstånd. Modellen skrev `mkdir unpacked && tar -xzf archives/sample.tar.gz -C unpacked`. Facit är `mkdir -p unpacked && tar -xzf archives/sample.tar.gz -C unpacked`. Riggen sa mismatch. Skillnaden i kommandot är `-p`. Orsaken till filsystemsskillnaden är inte diagnostiserad. Avvikelsen räknas i 33/40.
 
-**truncate-notes.** Modellen skrev `> notes.txt`. Facit är `truncate -s 0 notes.txt`. Båda är `destructive`. Den lilla träffade `truncate`. Effekten är en tom fil. `> notes.txt` är inte en accepterad variant, så avvikelsen står kvar i både 33/40 och den justerade 36/40.
+**truncate-notes.** Modellen skrev `> notes.txt`. Facit är `truncate -s 0 notes.txt`. Båda är `destructive`. Den lilla träffade `truncate`. Effekten är en tom fil. `> notes.txt` är inte en accepterad variant, så avvikelsen står kvar i både 33/40 och den justerade 37/40.
 
-Samma två `ps` och samma två `curl` som hos den lilla: **ps-current-user**, **ps-pid-one**, **curl-save-original** och **curl-header-line**. Tre av dem står i variantlistan och räknas rätt i den justerade siffran. **ps-current-user** gör det inte: kommandot är `ps -u $USER`.
+Samma två `ps` och samma två `curl` som hos den lilla: **ps-current-user**, **ps-pid-one**, **curl-save-original** och **curl-header-line**. Alla fyra räknas rätt i den justerade siffran. **ps-current-user** är `ps -u $USER`, samma kommando som facit utan citattecken.
 
 Den lilla flaggade `truncate -s 0`, `find -delete`, `git clean` och `rm`. Det är kommandon som går runt en blocklista som bara letar efter `rm` och `dd`. Utfallet säger något om blocklistan, och det tas upp i konkurrentanalysen.
 
@@ -142,7 +142,7 @@ För en disciplinerad read-only-användare ger verktyget ingen fördel. Codex ka
 
 Verktyget är smalare på andra sätt också. Det läser inte om ett fel och rättar sig, eftersom det aldrig kör. Det ser inte katalogen, bara prompten. Stjärnor på GitHub, hämtade 2026-10-19: [shell-gpt](https://github.com/TheR1D/shell_gpt) 12 298, [Open Interpreter](https://github.com/openinterpreter/openinterpreter) 68 604, [thefuck](https://github.com/nvbn/thefuck) 97 914 och [ai-shell](https://github.com/BuilderIO/ai-shell) 5 304. Ett helgprojekt har inte den mognaden. thefuck är en regelkatalog, `rules` i inställningsfilen, och frågar innan den kör ([const.py](https://github.com/nvbn/thefuck/blob/c7e7e1d8/thefuck/const.py)).
 
-Slutsatsen från mätningen står kvar bredvid det här. Ojusterat höll den billiga 35/40 mot 33/40. McNemars exakta test ger p = 0,625, så skillnaden är inte statistiskt säkerställd. Den justerade siffran är 39/40 mot 36/40. Den billiga kostade ungefär en femtedel. För det här användningsfallet räcker `gpt-4.1-mini`. De nya destruktiva uppgifterna är inte mätta.
+Slutsatsen från mätningen står kvar bredvid det här. Ojusterat höll den billiga 35/40 mot 33/40. McNemars exakta test ger p = 0,625, så skillnaden är inte statistiskt säkerställd. Den justerade siffran är 39/40 mot 37/40. Den billiga kostade ungefär en femtedel. För det här användningsfallet räcker `gpt-4.1-mini`. De nya destruktiva uppgifterna är inte mätta.
 
 ## Källor
 
