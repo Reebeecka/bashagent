@@ -2,7 +2,7 @@
 
 `bashagent` turns a plain-language request into one bash command, an explanation, and a risk label. The product never executes that command. Do not add a code path that runs it, and do not add a flag that would turn execution on. Pasting into the user's own shell is the only way a command runs.
 
-The eval harness, later, may run commands inside one disposable container against a generated fixture. That code stays in `eval/`, never in `bashagent/`. This skeleton does not run commands at all: tests pass strings around, and `make eval` only compares strings.
+The eval harness may run a hand-written behavior reference inside one disposable container against a generated fixture. That code stays in `eval/`, never in `bashagent/`. `make eval` only compares strings. `make validate-tasks` is the container path. It runs one container at a time and refuses destructive commands, including when the risk net disagrees with the label.
 
 ## Secrets
 
@@ -14,7 +14,9 @@ The report, the slides, and the tool's explanations are Swedish. Code, comments,
 
 ## Ground truth
 
-Write reference commands with a model that is not one of the models being measured, and record which model in `eval/tasks.yaml`. A reference counts only after it has been run in the fixture and produced the intended result. Do that before the first measured run. Tasks whose reference fails, exits non-zero, or does something else are not part of the set. The current `tasks.yaml` is a format example only. It has not been validated, and it is not a measurement.
+The current `eval/tasks.yaml` is a draft of 40 tasks. `authoring_model` is `none`: the references were written by hand, not by either model that will be measured, and not by a third model. Every reference is marked `status: draft` and `measurement: false`. Do not cite a run against this file as a result.
+
+`make validate-tasks` runs the GNU behavior references in the fixture and is required before any measured run. A reference that fails, exits non-zero, or does something else is not done. Passing that check still does not make the draft a measurement. Destructive commands and `method: variants` are not executed; review those by hand. BSD-only spellings are not executed on Linux.
 
 ## Cache
 

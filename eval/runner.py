@@ -1,8 +1,7 @@
-"""Run the example tasks against a provider. Does not execute commands.
+"""Compare provider output with the draft references. Does not execute commands.
 
-Behavior comparison in a container is not part of this skeleton. Every task is
-scored by string match against its reference. The fixture tree is generated
-only so the harness can check that the generator still builds.
+String mismatches against the fake provider are printed and are not a
+measurement. Behavior checks live in ``eval.validate``.
 """
 
 from __future__ import annotations
@@ -28,19 +27,84 @@ DEFAULT_TASKS = ROOT / "tasks.yaml"
 DEFAULT_CACHE = ROOT / "cache"
 FAKE_MODEL = "fake"
 
+_CATEGORIES = frozenset(
+    {
+        "filsökning",
+        "textbearbetning",
+        "katalog- och diskanalys",
+        "behörigheter",
+        "arkiv",
+        "processer",
+        "git",
+        "nätverk",
+        "destruktiv",
+    }
+)
+_METHODS = frozenset({"behavior", "variants"})
+_RISKS = frozenset({"safe", "caution", "destructive"})
+_DIFFICULTIES = frozenset({"enkel", "sammansatt"})
+_REFERENCE_KEYS = frozenset({"default", "gnu", "bsd", "status"})
+
 
 def load_tasks(path: Path) -> list[dict[str, Any]]:
     loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
-    tasks = loaded.get("tasks") if isinstance(loaded, dict) else None
+    if not isinstance(loaded, dict):
+        raise ValueError(f"{path} does not contain a tasks list")
+    if loaded.get("authoring_model") != "none":
+        raise ValueError("authoring_model must be none; this draft was not written by a model")
+    if loaded.get("draft") is not True or loaded.get("measurement") is not False:
+        raise ValueError("tasks.yaml is a draft and must not be marked as a measurement")
+    tasks = loaded.get("tasks")
     if not isinstance(tasks, list) or not tasks:
         raise ValueError(f"{path} does not contain a tasks list")
-    required = {"id", "prompt_sv", "category", "method", "risk_label", "reference"}
+    required = {
+        "id",
+        "prompt_sv",
+        "category",
+        "difficulty",
+        "method",
+        "risk_label",
+        "reference",
+        "draft",
+        "measurement",
+    }
+    seen: set[str] = set()
     for task in tasks:
         missing = required - set(task)
         if missing:
             raise ValueError(f"task {task.get('id', '?')} is missing {sorted(missing)}")
-        if "default" not in task["reference"]:
-            raise ValueError(f"task {task['id']} has no reference.default")
+        task_id = str(task["id"])
+        if task_id in seen:
+            raise ValueError(f"duplicate task id {task_id}")
+        seen.add(task_id)
+        if task["draft"] is not True or task["measurement"] is not False:
+            raise ValueError(f"task {task_id} must stay a draft and must not be a measurement")
+        if task.get("authoring_model") not in (None, "none"):
+            raise ValueError(f"task {task_id} must not name a model under evaluation")
+        if task["category"] not in _CATEGORIES:
+            raise ValueError(f"task {task_id} has unknown category {task['category']}")
+        if task["difficulty"] not in _DIFFICULTIES:
+            raise ValueError(f"task {task_id} has unknown difficulty")
+        if task["method"] not in _METHODS:
+            raise ValueError(f"task {task_id} has unknown method")
+        if task["risk_label"] not in _RISKS:
+            raise ValueError(f"task {task_id} has unknown risk_label")
+        if task["risk_label"] == "destructive" and task["method"] != "variants":
+            raise ValueError(f"task {task_id} is destructive and must use method variants")
+        reference = task["reference"]
+        if not isinstance(reference, dict) or "default" not in reference:
+            raise ValueError(f"task {task_id} has no reference.default")
+        extra = set(reference) - _REFERENCE_KEYS
+        if extra:
+            raise ValueError(f"task {task_id} has unexpected reference keys {sorted(extra)}")
+        if reference.get("status") != "draft":
+            raise ValueError(f"task {task_id} reference must be marked status: draft")
+        if "bsd" in reference:
+            gnu = reference.get("gnu", reference["default"])
+            if reference["bsd"] == gnu:
+                raise ValueError(f"task {task_id} repeats the same command for bsd and gnu")
+        if task["method"] == "behavior" and not isinstance(task.get("expect"), dict):
+            raise ValueError(f"task {task_id} is missing expect")
     return tasks
 
 
@@ -102,12 +166,15 @@ def run_eval(
             failures += 1
             continue
         matched = variant_match(suggestion.command, task, resolved)
-        outcome = "match" if matched else "mismatch"
-        if suggestion.risk != task["risk_label"]:
-            outcome = f"{outcome}/risk"
-            failures += 1
+        risk_ok = suggestion.risk == task["risk_label"]
+        if matched and risk_ok:
+            outcome = "match"
+        elif not matched and not risk_ok:
+            outcome = "mismatch/risk"
         elif not matched:
-            failures += 1
+            outcome = "mismatch"
+        else:
+            outcome = "risk"
         rows.append((task["id"], suggestion.risk, outcome))
     _print_report(rows, resolved)
     return 1 if failures else 0
@@ -124,13 +191,14 @@ def _check_fixture() -> None:
 
 
 def _print_report(rows: list[tuple[str, str, str]], platform: str) -> None:
+    width = max((len(task_id) for task_id, _, _ in rows), default=2)
     print(f"platform: {platform}")
-    print(f"{'id':<28} {'risk':<14} outcome")
+    print(f"{'id':<{width}}  {'risk':<14} outcome")
     for task_id, risk, outcome in rows:
-        print(f"{task_id:<28} {risk:<14} {outcome}")
+        print(f"{task_id:<{width}}  {risk:<14} {outcome}")
     matched = sum(1 for _, _, outcome in rows if outcome == "match")
-    print(f"{matched}/{len(rows)} matched. No commands were executed.")
-    print("Behavior comparison in a container is not part of this skeleton.")
+    print(f"{matched}/{len(rows)} string-matched against the fake provider. Not a measurement.")
+    print("No commands were executed.")
 
 
 def main(argv: list[str] | None = None) -> int:

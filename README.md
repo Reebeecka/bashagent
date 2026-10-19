@@ -81,15 +81,19 @@ Responses are cached on disk. The cache key is a SHA-256 of the system prompt, u
 ```bash
 make test
 make eval
+make validate-tasks
 ```
 
-`make eval` runs `eval/tasks.yaml` through the fake provider and the on-disk cache. It compares command strings. It does not execute them, and it does not call an API. No API key is required.
+`make eval` runs `eval/tasks.yaml` through the fake provider and the on-disk cache. It compares command strings. It does not execute them, and it does not call an API. A mismatch against the fake provider is expected. It is not a measurement. No API key is required.
 
-`eval/tasks.yaml` holds a few examples so the file format is fixed. It is not the 40-task set, and the references have not been execution-validated. There is no results table yet. Once real responses are cached and checked in, `make eval` is meant to reproduce that table from the cache without an API key.
+`make validate-tasks` runs each non-destructive behavior reference in one Debian container (`debian:bookworm-slim`, `--memory=512m --pids-limit=256 --cpus=1 --network=none`) and checks it against the fixture. The fixture is copied onto the container's writable layer. Destructive tasks are skipped and are never run. Variant tasks (git, network, processes) are skipped too. Docker is required for that target only.
+
+`eval/tasks.yaml` is a 40-task draft. `authoring_model` is `none`: the references were written by hand, not by either model that will later be measured. Every reference is marked draft. A green `make validate-tasks` checks the GNU command. It does not turn the file into a measurement, and there is no results table yet.
 
 ## Limitations
 
-- Nothing in `bashagent/` runs a generated command. Container execution for the behavior tasks is not built yet.
+- Nothing in `bashagent/` runs a generated command. `eval/` may run a hand-written behavior reference in a container. It refuses destructive commands.
+- BSD-specific references are recorded and are not executed on Linux.
 - The fake provider returns scripted answers. Its match rate is not a measurement.
 - The OpenAI client is implemented and untested against the live API. This tree has no key.
 - There is no Anthropic provider yet.
