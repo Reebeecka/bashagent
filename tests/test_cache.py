@@ -15,6 +15,7 @@ def _identity() -> CallIdentity:
         max_output_tokens=400,
         platform_mode="gnu",
         json_schema=SUGGESTION_JSON_SCHEMA,
+        provider="fake",
     )
 
 
@@ -34,6 +35,7 @@ def test_every_identity_field_changes_the_key():
         replace(base, max_output_tokens=200),
         replace(base, platform_mode="auto"),
         replace(base, json_schema={"type": "object"}),
+        replace(base, provider="openai"),
     ]
     assert len({cache_key(item) for item in variants}) == len(variants)
     for item in variants:

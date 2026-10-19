@@ -1,7 +1,7 @@
 """Disk cache keyed by a hash of the whole call identity.
 
-The same prompt, model, temperature, token cap, platform mode, and schema reuse
-one stored response. Changing any of those is a different call.
+The same provider, prompt, model, temperature, token cap, platform mode, and
+schema reuse one stored response. Changing any of those is a different call.
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ class CallIdentity:
     max_output_tokens: int
     platform_mode: str
     json_schema: dict[str, Any]
+    provider: str
 
     def canonical(self) -> str:
         payload = {
@@ -37,6 +38,7 @@ class CallIdentity:
             "max_output_tokens": self.max_output_tokens,
             "platform_mode": self.platform_mode,
             "json_schema": self.json_schema,
+            "provider": self.provider,
         }
         return json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
 

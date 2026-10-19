@@ -121,6 +121,7 @@ def run(description: str, settings: Settings, *, home: Path | None = None) -> in
         max_output_tokens=settings.max_output_tokens,
         platform_mode=settings.platform,
         json_schema=SUGGESTION_JSON_SCHEMA,
+        provider=settings.provider,
     )
     cache = DiskCache(settings.cache_dir)
     response: RawResponse | None = None

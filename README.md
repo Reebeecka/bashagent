@@ -74,7 +74,7 @@ cli → config → prompt (system prompt + platform + a few examples)
       render               clipboard
 ```
 
-Responses are cached on disk. The cache key is a SHA-256 of the system prompt, user prompt, prompt version, model id, temperature, output-token cap, platform mode, and JSON schema.
+Responses are cached on disk. The cache key is a SHA-256 of the provider, system prompt, user prompt, prompt version, model id, temperature, output-token cap, platform mode, and JSON schema.
 
 ## Evaluation
 
