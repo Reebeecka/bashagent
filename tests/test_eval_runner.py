@@ -11,8 +11,10 @@ def test_fake_provider_parses_the_draft_set(tmp_path, capsys):
     assert run_eval(provider_name="fake", platform_mode="bsd", cache_dir=tmp_path / "bsd") == 0
 
 
-def test_runner_refuses_a_live_provider():
-    assert main(["--provider", "openai"]) == 1
+def test_unpriced_model_is_refused(capsys):
+    code = main(["--provider", "openai", "--model", "not-a-priced-model", "--smoke"])
+    assert code == 1
+    assert "No price" in capsys.readouterr().out
 
 
 def test_product_and_eval_do_not_shell_out():

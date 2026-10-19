@@ -2,7 +2,7 @@
 
 `bashagent` turns a plain-language request into one bash command, an explanation, and a risk label. The product never executes that command. Do not add a code path that runs it, and do not add a flag that would turn execution on. Pasting into the user's own shell is the only way a command runs.
 
-The eval harness may run a hand-written behavior reference inside one disposable container against a generated fixture. That code stays in `eval/`, never in `bashagent/`. `make eval` only compares strings. `make validate-tasks` is the container path. It runs one container at a time and refuses destructive commands, including when the risk net disagrees with the label.
+The eval harness may run a hand-written behavior reference, and a safe reading command from a live eval, inside one disposable container against a generated fixture. That code stays in `eval/`, never in `bashagent/`. `make eval` with the fake provider only compares strings. With `PROVIDER=openai` it calls the API through the cache, stops at `MAX_RUN_COST_USD`, and compares reading tasks in a container. `make validate-tasks` checks references. Both paths run one container at a time and refuse destructive commands, including when the risk net disagrees with the label. Do not select `gpt-5-mini`; it rejects temperature 0.
 
 ## Secrets
 

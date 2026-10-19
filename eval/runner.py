@@ -1,7 +1,8 @@
-"""Compare provider output with the draft references. Does not execute commands.
+"""Compare provider output with the draft references.
 
-String mismatches against the fake provider are printed and are not a
-measurement. Behavior checks live in ``eval.validate``.
+The fake provider is string-only and executes nothing. An OpenAI run uses the
+disk cache, stops when the paid total passes the cap, and compares reading
+tasks by running them. Destructive commands are never executed.
 """
 
 from __future__ import annotations
@@ -13,13 +14,23 @@ from typing import Any
 
 import yaml
 from bashagent.cache import CallIdentity, DiskCache
+from bashagent.config import load_dotenv
 from bashagent.platform import resolve_platform
 from bashagent.prompt import PROMPT_VERSION, TEMPERATURE, build_prompts
-from bashagent.providers import CompletionRequest, get_provider
+from bashagent.providers import CompletionRequest, ProviderError, get_provider
 from bashagent.risk import apply_risk_net
 from bashagent.schema import SUGGESTION_JSON_SCHEMA, SchemaError, parse_suggestion
 
+from eval.behavior import compare_reading, is_reading_task, prepare_containers
 from eval.compare import variant_match
+from eval.cost import (
+    DEFAULT_CAP_USD,
+    Ledger,
+    RunCostExceeded,
+    UnpricedModelError,
+    cost_usd,
+    refuse_reason,
+)
 from eval.fixtures import EXPECTED_404_COUNT, count_404_lines, generate
 
 ROOT = Path(__file__).resolve().parent
@@ -117,19 +128,52 @@ def run_eval(
     smoke_only: bool = False,
     no_cache: bool = False,
     model: str = FAKE_MODEL,
+    max_run_cost_usd: float = DEFAULT_CAP_USD,
+    execute_reading: bool | None = None,
 ) -> int:
     tasks = load_tasks(tasks_path)
     if smoke_only:
         tasks = [task for task in tasks if task.get("smoke")]
-    if provider_name != "fake":
-        raise RuntimeError("This skeleton only runs the fake provider. No live model call is made.")
+    if not tasks:
+        print("No tasks selected.")
+        return 1
+    blocked = refuse_reason(model)
+    if blocked is not None:
+        print(blocked)
+        return 1
+    if provider_name == "openai":
+        try:
+            cost_usd(model, 0, 0)
+        except UnpricedModelError as exc:
+            print(exc)
+            return 1
     resolved = resolve_platform(platform_mode)
     _check_fixture()
-    provider = get_provider(provider_name, model=model)
+    live = provider_name == "openai"
+    compare_reads = live if execute_reading is None else execute_reading
+    try:
+        provider = get_provider(provider_name, model=model)
+    except ProviderError as exc:
+        print(exc)
+        return 1
+    if compare_reads and any(is_reading_task(task) for task in tasks):
+        try:
+            prepare_containers()
+        except Exception as exc:
+            print(f"Container image is not ready: {exc}")
+            return 1
     cache = DiskCache(cache_dir)
+    ledger = Ledger(cap_usd=max_run_cost_usd)
     rows: list[tuple[str, str, str]] = []
     failures = 0
     for task in tasks:
+        if live and ledger.paid_calls and ledger.paid_usd >= ledger.cap_usd:
+            print(
+                f"Stopped: paid {ledger.paid_usd:.6f} USD has reached "
+                f"the {ledger.cap_usd:.2f} USD cap."
+            )
+            _print_report(rows, resolved, ledger, live=live)
+            return 2
         system_prompt, user_prompt = build_prompts(
             task["prompt_sv"],
             platform=resolved,
@@ -146,39 +190,68 @@ def run_eval(
             json_schema=SUGGESTION_JSON_SCHEMA,
             provider=provider_name,
         )
-        response = None if no_cache else cache.get(identity)
-        if response is None:
-            response = provider.complete(
-                CompletionRequest(
-                    system_prompt=system_prompt,
-                    user_prompt=user_prompt,
-                    model=model,
-                    temperature=TEMPERATURE,
-                    max_output_tokens=400,
-                    json_schema=SUGGESTION_JSON_SCHEMA,
+        cached = None if no_cache else cache.get(identity)
+        paid = cached is None
+        if cached is None:
+            try:
+                response = provider.complete(
+                    CompletionRequest(
+                        system_prompt=system_prompt,
+                        user_prompt=user_prompt,
+                        model=model,
+                        temperature=TEMPERATURE,
+                        max_output_tokens=400,
+                        json_schema=SUGGESTION_JSON_SCHEMA,
+                    )
                 )
-            )
+            except ProviderError as exc:
+                print(exc)
+                _print_report(rows, resolved, ledger, live=live)
+                return 1
             if not no_cache:
                 cache.put(identity, response)
+        else:
+            response = cached
+        if live:
+            try:
+                ledger.note(
+                    model,
+                    response.input_tokens,
+                    response.output_tokens,
+                    paid=paid,
+                )
+            except RunCostExceeded as exc:
+                print(exc)
+                _print_report(rows, resolved, ledger, live=live)
+                return 2
         try:
             suggestion = apply_risk_net(parse_suggestion(response.text))
         except SchemaError:
             rows.append((task["id"], "-", "unparseable"))
             failures += 1
             continue
-        matched = variant_match(suggestion.command, task, resolved)
-        risk_ok = suggestion.risk == task["risk_label"]
-        if matched and risk_ok:
-            outcome = "match"
-        elif not matched and not risk_ok:
-            outcome = "mismatch/risk"
-        elif not matched:
-            outcome = "mismatch"
-        else:
-            outcome = "risk"
+        outcome = _outcome(task, suggestion.command, suggestion.risk, resolved, compare_reads)
         rows.append((task["id"], suggestion.risk, outcome))
-    _print_report(rows, resolved)
+    _print_report(rows, resolved, ledger, live=live)
     return 1 if failures else 0
+
+
+def _outcome(
+    task: dict[str, Any],
+    command: str,
+    risk: str,
+    platform: str,
+    compare_reads: bool,
+) -> str:
+    if compare_reads and is_reading_task(task):
+        command_outcome = compare_reading(task, command)
+    else:
+        command_outcome = "match" if variant_match(command, task, platform) else "mismatch"
+    if risk == task["risk_label"]:
+        return command_outcome
+    if command_outcome == "match":
+        return "risk"
+    return f"{command_outcome}/risk"
 
 
 def _check_fixture() -> None:
@@ -191,19 +264,36 @@ def _check_fixture() -> None:
             )
 
 
-def _print_report(rows: list[tuple[str, str, str]], platform: str) -> None:
+def _print_report(
+    rows: list[tuple[str, str, str]],
+    platform: str,
+    ledger: Ledger,
+    *,
+    live: bool,
+) -> None:
     width = max((len(task_id) for task_id, _, _ in rows), default=2)
     print(f"platform: {platform}")
     print(f"{'id':<{width}}  {'risk':<14} outcome")
     for task_id, risk, outcome in rows:
         print(f"{task_id:<{width}}  {risk:<14} {outcome}")
     matched = sum(1 for _, _, outcome in rows if outcome == "match")
-    print(f"{matched}/{len(rows)} string-matched against the fake provider. Not a measurement.")
-    print("No commands were executed.")
+    if live:
+        print(f"{matched}/{len(rows)} held on the compared field. Not a measurement.")
+        print("Destructive commands were not executed.")
+        print(f"paid_calls: {ledger.paid_calls}")
+        print(f"cache_hits: {ledger.cache_hits}")
+        print(f"input_tokens: {ledger.input_tokens}")
+        print(f"output_tokens: {ledger.output_tokens}")
+        print(f"paid_usd: {ledger.paid_usd:.6f}")
+        print(f"cached_usd: {ledger.cached_usd:.6f}")
+        print(f"cap_usd: {ledger.cap_usd:.2f}")
+    else:
+        print(f"{matched}/{len(rows)} string-matched against the fake provider. Not a measurement.")
+        print("No commands were executed.")
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run bashagent eval tasks. Executes nothing.")
+    parser = argparse.ArgumentParser(description="Run bashagent eval tasks.")
     parser.add_argument("--provider", default="fake", choices=["fake", "openai"])
     parser.add_argument("--platform", default="gnu", choices=["auto", "bsd", "gnu"])
     parser.add_argument("--tasks", type=Path, default=DEFAULT_TASKS)
@@ -211,9 +301,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", default=FAKE_MODEL)
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--no-cache", action="store_true")
+    parser.add_argument("--max-run-cost-usd", type=float, default=DEFAULT_CAP_USD)
     args = parser.parse_args(argv)
-    if args.provider == "openai":
-        print("Refusing --provider openai in this skeleton. No live model call is made.")
+    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+    blocked = refuse_reason(args.model)
+    if blocked is not None:
+        print(blocked)
+        return 1
+    if args.max_run_cost_usd <= 0:
+        print("max-run-cost-usd must be positive.")
         return 1
     return run_eval(
         tasks_path=args.tasks,
@@ -223,6 +319,7 @@ def main(argv: list[str] | None = None) -> int:
         smoke_only=args.smoke,
         no_cache=args.no_cache,
         model=args.model,
+        max_run_cost_usd=args.max_run_cost_usd,
     )
 
 
