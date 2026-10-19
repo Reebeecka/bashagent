@@ -75,7 +75,7 @@ class OpenAIProvider:
         )
         started = time.perf_counter()
         try:
-            with self._opener(http_request, self._timeout_s) as response:
+            with self._opener(http_request, timeout=self._timeout_s) as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")[:500]
