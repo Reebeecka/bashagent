@@ -6,6 +6,24 @@ import re
 from typing import Any
 
 
+def normalize(text: str, *, order: str = "sorted") -> str:
+    """Normalize command output for a behavior comparison.
+
+    Trims each line, drops a leading ``./``, collapses whitespace, and sorts
+    unless ``order`` is ``exact`` (for commands such as ``head``).
+    """
+    lines: list[str] = []
+    for raw in text.splitlines():
+        line = " ".join(raw.strip().removeprefix("./").split())
+        if line:
+            lines.append(line)
+    if order == "sorted":
+        lines.sort()
+    elif order != "exact":
+        raise ValueError(f"unknown stdout order: {order}")
+    return "\n".join(lines)
+
+
 def normalize_command(command: str) -> str:
     """Collapse whitespace, unify quotes, and sort clusters of short flags."""
     text = " ".join(command.replace('"', "'").split())
