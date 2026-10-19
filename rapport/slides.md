@@ -6,13 +6,13 @@ Verktyget kör aldrig kommandot.
 
 Mätning 19 oktober 2026. `gpt-4.1-mini` mot `gpt-4.1`. 40 uppgifter, GNU, temperatur 0, prompt 0.1.0.
 
-Fjorton nya destruktiva uppgifter ligger i testsetet. De är inte mätta. Prompten i trädet är 0.2.0 och har inte körts mot API:t.
+Prompt 0.2.0 är mätt på alla 54 uppgifter. Siffrorna står på en egen bild.
 
 ---
 
 # Resultat
 
-Mätt med prompt 0.1.0 på 40 uppgifter. Repot har nu 0.2.0 och 54 uppgifter, som inte är mätta.
+Mätt med prompt 0.1.0 på 40 uppgifter. Prompt 0.2.0 är mätt på alla 54 uppgifter, separat nedan.
 
 | | gpt-4.1-mini | gpt-4.1 |
 |---|---:|---:|
@@ -28,6 +28,22 @@ McNemar, exakt test: den lilla ensam rätt på 3, den stora ensam rätt på 1. p
 Skillnaden 35/40 mot 33/40 är inte statistiskt säkerställd. Den billiga var före, kostade ungefär en femtedel, och har lägre medianlatens. Det är hypotes 6.
 
 Hela API-kostnaden, med rökkörningen, ligger runt 0,09 USD.
+
+---
+
+# Prompt 0.2.0
+
+Alla 54 uppgifter, temperatur 0, GNU. Destruktiva kommandon kördes inte.
+
+| | gpt-4.1-mini | gpt-4.1 |
+|---|---:|---:|
+| Höll på det som jämfördes | 41/54 | 40/54 |
+| Betalt | 0,020865 USD | 0,105630 USD |
+| Medianlatens | 1123,2 ms | 1059,8 ms |
+
+Egen märkning `destructive` på de 18 destruktiva uppgifterna: 12 mot 15. Nätet: 16 av 18 hos båda. McNemar 6 mot 5, p = 1.
+
+Den lilla satte `caution` och den stora `destructive` på `truncate-notes`, `empty-draft-redirect` och `truncate-access-log`. På `sed-rewrite-configs` och `rsync-mirror-delete` stod båda på `caution`. På `chmod-lock-tree` stod båda på `caution` och nätet höjde.
 
 ---
 
